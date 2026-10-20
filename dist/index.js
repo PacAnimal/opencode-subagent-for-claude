@@ -34,7 +34,7 @@ var __toESM = (mod, isNodeMode, target) => {
 };
 var __commonJS = (cb, mod) => () => (mod || cb((mod = { exports: {} }).exports, mod), mod.exports);
 
-// node_modules/ajv/dist/compile/codegen/code.js
+// ../../../../../../../Users/oyvhvi/Code/opencode-subagent-for-claude/node_modules/ajv/dist/compile/codegen/code.js
 var require_code = __commonJS(function(exports) {
   Object.defineProperty(exports, "__esModule", { value: true });
   exports.regexpCode = exports.getEsmExportName = exports.getProperty = exports.safeStringify = exports.stringify = exports.strConcat = exports.addCodeArg = exports.str = exports._ = exports.nil = exports._Code = exports.Name = exports.IDENTIFIER = exports._CodeOrName = undefined;
@@ -188,7 +188,7 @@ var require_code = __commonJS(function(exports) {
   exports.regexpCode = regexpCode;
 });
 
-// node_modules/ajv/dist/compile/codegen/scope.js
+// ../../../../../../../Users/oyvhvi/Code/opencode-subagent-for-claude/node_modules/ajv/dist/compile/codegen/scope.js
 var require_scope = __commonJS(function(exports) {
   Object.defineProperty(exports, "__esModule", { value: true });
   exports.ValueScope = exports.ValueScopeName = exports.Scope = exports.varKinds = exports.UsedValueState = undefined;
@@ -334,7 +334,7 @@ var require_scope = __commonJS(function(exports) {
   exports.ValueScope = ValueScope;
 });
 
-// node_modules/ajv/dist/compile/codegen/index.js
+// ../../../../../../../Users/oyvhvi/Code/opencode-subagent-for-claude/node_modules/ajv/dist/compile/codegen/index.js
 var require_codegen = __commonJS(function(exports) {
   Object.defineProperty(exports, "__esModule", { value: true });
   exports.or = exports.and = exports.not = exports.CodeGen = exports.operators = exports.varKinds = exports.ValueScopeName = exports.ValueScope = exports.Scope = exports.Name = exports.regexpCode = exports.stringify = exports.getProperty = exports.nil = exports.strConcat = exports.str = exports._ = undefined;
@@ -1044,7 +1044,7 @@ var require_codegen = __commonJS(function(exports) {
   }
 });
 
-// node_modules/ajv/dist/compile/util.js
+// ../../../../../../../Users/oyvhvi/Code/opencode-subagent-for-claude/node_modules/ajv/dist/compile/util.js
 var require_util = __commonJS(function(exports) {
   Object.defineProperty(exports, "__esModule", { value: true });
   exports.checkStrictMode = exports.getErrorPath = exports.Type = exports.useFunc = exports.setEvaluated = exports.evaluatedPropsToName = exports.mergeEvaluated = exports.eachItem = exports.unescapeJsonPointer = exports.escapeJsonPointer = exports.escapeFragment = exports.unescapeFragment = exports.schemaRefOrVal = exports.schemaHasRulesButRef = exports.schemaHasRules = exports.checkUnknownRules = exports.alwaysValidSchema = exports.toHash = undefined;
@@ -1208,7 +1208,7 @@ var require_util = __commonJS(function(exports) {
   exports.checkStrictMode = checkStrictMode;
 });
 
-// node_modules/ajv/dist/compile/names.js
+// ../../../../../../../Users/oyvhvi/Code/opencode-subagent-for-claude/node_modules/ajv/dist/compile/names.js
 var require_names = __commonJS(function(exports) {
   Object.defineProperty(exports, "__esModule", { value: true });
   var codegen_1 = require_codegen();
@@ -1233,7 +1233,7 @@ var require_names = __commonJS(function(exports) {
   exports.default = names;
 });
 
-// node_modules/ajv/dist/compile/errors.js
+// ../../../../../../../Users/oyvhvi/Code/opencode-subagent-for-claude/node_modules/ajv/dist/compile/errors.js
 var require_errors = __commonJS(function(exports) {
   Object.defineProperty(exports, "__esModule", { value: true });
   exports.extendErrors = exports.resetErrorsCount = exports.reportExtraError = exports.reportError = exports.keyword$DataError = exports.keywordError = undefined;
@@ -1351,7 +1351,7 @@ var require_errors = __commonJS(function(exports) {
   }
 });
 
-// node_modules/ajv/dist/compile/validate/boolSchema.js
+// ../../../../../../../Users/oyvhvi/Code/opencode-subagent-for-claude/node_modules/ajv/dist/compile/validate/boolSchema.js
 var require_boolSchema = __commonJS(function(exports) {
   Object.defineProperty(exports, "__esModule", { value: true });
   exports.boolOrEmptySchema = exports.topBoolOrEmptySchema = undefined;
@@ -1399,7 +1399,7 @@ var require_boolSchema = __commonJS(function(exports) {
   }
 });
 
-// node_modules/ajv/dist/compile/rules.js
+// ../../../../../../../Users/oyvhvi/Code/opencode-subagent-for-claude/node_modules/ajv/dist/compile/rules.js
 var require_rules = __commonJS(function(exports) {
   Object.defineProperty(exports, "__esModule", { value: true });
   exports.getRules = exports.isJSONType = undefined;
@@ -1427,7 +1427,7 @@ var require_rules = __commonJS(function(exports) {
   exports.getRules = getRules;
 });
 
-// node_modules/ajv/dist/compile/validate/applicability.js
+// ../../../../../../../Users/oyvhvi/Code/opencode-subagent-for-claude/node_modules/ajv/dist/compile/validate/applicability.js
 var require_applicability = __commonJS(function(exports) {
   Object.defineProperty(exports, "__esModule", { value: true });
   exports.shouldUseRule = exports.shouldUseGroup = exports.schemaHasRulesForType = undefined;
@@ -1447,7 +1447,7 @@ var require_applicability = __commonJS(function(exports) {
   exports.shouldUseRule = shouldUseRule;
 });
 
-// node_modules/ajv/dist/compile/validate/dataType.js
+// ../../../../../../../Users/oyvhvi/Code/opencode-subagent-for-claude/node_modules/ajv/dist/compile/validate/dataType.js
 var require_dataType = __commonJS(function(exports) {
   Object.defineProperty(exports, "__esModule", { value: true });
   exports.reportTypeError = exports.checkDataTypes = exports.checkDataType = exports.coerceAndCheckDataType = exports.getJSONTypes = exports.getSchemaTypes = exports.DataType = undefined;
@@ -1628,7 +1628,7 @@ var require_dataType = __commonJS(function(exports) {
   }
 });
 
-// node_modules/ajv/dist/compile/validate/defaults.js
+// ../../../../../../../Users/oyvhvi/Code/opencode-subagent-for-claude/node_modules/ajv/dist/compile/validate/defaults.js
 var require_defaults = __commonJS(function(exports) {
   Object.defineProperty(exports, "__esModule", { value: true });
   exports.assignDefaults = undefined;
@@ -1662,7 +1662,7 @@ var require_defaults = __commonJS(function(exports) {
   }
 });
 
-// node_modules/ajv/dist/vocabularies/code.js
+// ../../../../../../../Users/oyvhvi/Code/opencode-subagent-for-claude/node_modules/ajv/dist/vocabularies/code.js
 var require_code2 = __commonJS(function(exports) {
   Object.defineProperty(exports, "__esModule", { value: true });
   exports.validateUnion = exports.validateArray = exports.usePattern = exports.callValidateCode = exports.schemaProperties = exports.allSchemaProperties = exports.noPropertyInData = exports.propertyInData = exports.isOwnProperty = exports.hasPropFunc = exports.reportMissingProp = exports.checkMissingProp = exports.checkReportMissingProp = undefined;
@@ -1791,7 +1791,7 @@ var require_code2 = __commonJS(function(exports) {
   exports.validateUnion = validateUnion;
 });
 
-// node_modules/ajv/dist/compile/validate/keyword.js
+// ../../../../../../../Users/oyvhvi/Code/opencode-subagent-for-claude/node_modules/ajv/dist/compile/validate/keyword.js
 var require_keyword = __commonJS(function(exports) {
   Object.defineProperty(exports, "__esModule", { value: true });
   exports.validateKeywordUsage = exports.validSchemaType = exports.funcKeywordCode = exports.macroKeywordCode = undefined;
@@ -1906,7 +1906,7 @@ var require_keyword = __commonJS(function(exports) {
   exports.validateKeywordUsage = validateKeywordUsage;
 });
 
-// node_modules/ajv/dist/compile/validate/subschema.js
+// ../../../../../../../Users/oyvhvi/Code/opencode-subagent-for-claude/node_modules/ajv/dist/compile/validate/subschema.js
 var require_subschema = __commonJS(function(exports) {
   Object.defineProperty(exports, "__esModule", { value: true });
   exports.extendSubschemaMode = exports.extendSubschemaData = exports.getSubschema = undefined;
@@ -1986,7 +1986,7 @@ var require_subschema = __commonJS(function(exports) {
   exports.extendSubschemaMode = extendSubschemaMode;
 });
 
-// node_modules/fast-deep-equal/index.js
+// ../../../../../../../Users/oyvhvi/Code/opencode-subagent-for-claude/node_modules/fast-deep-equal/index.js
 var require_fast_deep_equal = __commonJS(function(exports, module) {
   module.exports = function equal(a, b) {
     if (a === b)
@@ -2028,7 +2028,7 @@ var require_fast_deep_equal = __commonJS(function(exports, module) {
   };
 });
 
-// node_modules/json-schema-traverse/index.js
+// ../../../../../../../Users/oyvhvi/Code/opencode-subagent-for-claude/node_modules/json-schema-traverse/index.js
 var require_json_schema_traverse = __commonJS(function(exports, module) {
   var traverse = module.exports = function(schema, opts, cb) {
     if (typeof opts == "function") {
@@ -2111,7 +2111,7 @@ var require_json_schema_traverse = __commonJS(function(exports, module) {
   }
 });
 
-// node_modules/ajv/dist/compile/resolve.js
+// ../../../../../../../Users/oyvhvi/Code/opencode-subagent-for-claude/node_modules/ajv/dist/compile/resolve.js
 var require_resolve = __commonJS(function(exports) {
   Object.defineProperty(exports, "__esModule", { value: true });
   exports.getSchemaRefs = exports.resolveUrl = exports.normalizeId = exports._getFullPath = exports.getFullPath = exports.inlineRef = undefined;
@@ -2264,7 +2264,7 @@ var require_resolve = __commonJS(function(exports) {
   exports.getSchemaRefs = getSchemaRefs;
 });
 
-// node_modules/ajv/dist/compile/validate/index.js
+// ../../../../../../../Users/oyvhvi/Code/opencode-subagent-for-claude/node_modules/ajv/dist/compile/validate/index.js
 var require_validate = __commonJS(function(exports) {
   Object.defineProperty(exports, "__esModule", { value: true });
   exports.getData = exports.KeywordCxt = exports.validateFunctionCode = undefined;
@@ -2769,7 +2769,7 @@ var require_validate = __commonJS(function(exports) {
   exports.getData = getData;
 });
 
-// node_modules/ajv/dist/runtime/validation_error.js
+// ../../../../../../../Users/oyvhvi/Code/opencode-subagent-for-claude/node_modules/ajv/dist/runtime/validation_error.js
 var require_validation_error = __commonJS(function(exports) {
   Object.defineProperty(exports, "__esModule", { value: true });
 
@@ -2783,7 +2783,7 @@ var require_validation_error = __commonJS(function(exports) {
   exports.default = ValidationError;
 });
 
-// node_modules/ajv/dist/compile/ref_error.js
+// ../../../../../../../Users/oyvhvi/Code/opencode-subagent-for-claude/node_modules/ajv/dist/compile/ref_error.js
 var require_ref_error = __commonJS(function(exports) {
   Object.defineProperty(exports, "__esModule", { value: true });
   var resolve_1 = require_resolve();
@@ -2798,7 +2798,7 @@ var require_ref_error = __commonJS(function(exports) {
   exports.default = MissingRefError;
 });
 
-// node_modules/ajv/dist/compile/index.js
+// ../../../../../../../Users/oyvhvi/Code/opencode-subagent-for-claude/node_modules/ajv/dist/compile/index.js
 var require_compile = __commonJS(function(exports) {
   Object.defineProperty(exports, "__esModule", { value: true });
   exports.resolveSchema = exports.getCompilingSchema = exports.resolveRef = exports.compileSchema = exports.SchemaEnv = undefined;
@@ -3019,7 +3019,7 @@ var require_compile = __commonJS(function(exports) {
   }
 });
 
-// node_modules/ajv/dist/refs/data.json
+// ../../../../../../../Users/oyvhvi/Code/opencode-subagent-for-claude/node_modules/ajv/dist/refs/data.json
 var require_data = __commonJS(function(exports, module) {
   module.exports = {
     $id: "https://raw.githubusercontent.com/ajv-validator/ajv/master/lib/refs/data.json#",
@@ -3036,7 +3036,7 @@ var require_data = __commonJS(function(exports, module) {
   };
 });
 
-// node_modules/fast-uri/lib/utils.js
+// ../../../../../../../Users/oyvhvi/Code/opencode-subagent-for-claude/node_modules/fast-uri/lib/utils.js
 var require_utils = __commonJS(function(exports, module) {
   var isUUID = RegExp.prototype.test.bind(/^[\da-f]{8}-[\da-f]{4}-[\da-f]{4}-[\da-f]{4}-[\da-f]{12}$/iu);
   var isIPv4 = RegExp.prototype.test.bind(/^(?:(?:25[0-5]|2[0-4]\d|1\d{2}|[1-9]\d|\d)\.){3}(?:25[0-5]|2[0-4]\d|1\d{2}|[1-9]\d|\d)$/u);
@@ -3585,7 +3585,7 @@ var require_utils = __commonJS(function(exports, module) {
   };
 });
 
-// node_modules/fast-uri/lib/schemes.js
+// ../../../../../../../Users/oyvhvi/Code/opencode-subagent-for-claude/node_modules/fast-uri/lib/schemes.js
 var require_schemes = __commonJS(function(exports, module) {
   var { isUUID } = require_utils();
   var URN_REG = /^([\da-z][\d\-a-z]{0,31}):((?:[\w!$'()*+,\-./:;=@]|%[\da-f]{2})+)$/iu;
@@ -3760,7 +3760,7 @@ var require_schemes = __commonJS(function(exports, module) {
   };
 });
 
-// node_modules/fast-uri/index.js
+// ../../../../../../../Users/oyvhvi/Code/opencode-subagent-for-claude/node_modules/fast-uri/index.js
 var require_fast_uri = __commonJS(function(exports, module) {
   var { normalizeIPv6, removeDotSegments, removeDotSegmentsRelative, recomposeAuthority, normalizePercentEncoding, normalizePathEncoding, serializePathEncoding, normalizeQueryFragmentEncoding, encodeQuery, encodeFragment, reescapeHostDelimiters, isIPv4, nonSimpleDomain } = require_utils();
   var { SCHEMES, getSchemeHandler } = require_schemes();
@@ -4185,7 +4185,7 @@ var require_fast_uri = __commonJS(function(exports, module) {
   module.exports.fastUri = fastUri;
 });
 
-// node_modules/ajv/dist/runtime/uri.js
+// ../../../../../../../Users/oyvhvi/Code/opencode-subagent-for-claude/node_modules/ajv/dist/runtime/uri.js
 var require_uri = __commonJS(function(exports) {
   Object.defineProperty(exports, "__esModule", { value: true });
   var uri = require_fast_uri();
@@ -4193,7 +4193,7 @@ var require_uri = __commonJS(function(exports) {
   exports.default = uri;
 });
 
-// node_modules/ajv/dist/core.js
+// ../../../../../../../Users/oyvhvi/Code/opencode-subagent-for-claude/node_modules/ajv/dist/core.js
 var require_core = __commonJS(function(exports) {
   Object.defineProperty(exports, "__esModule", { value: true });
   exports.CodeGen = exports.Name = exports.nil = exports.stringify = exports.str = exports._ = exports.KeywordCxt = undefined;
@@ -4786,7 +4786,7 @@ var require_core = __commonJS(function(exports) {
   }
 });
 
-// node_modules/ajv/dist/vocabularies/core/id.js
+// ../../../../../../../Users/oyvhvi/Code/opencode-subagent-for-claude/node_modules/ajv/dist/vocabularies/core/id.js
 var require_id = __commonJS(function(exports) {
   Object.defineProperty(exports, "__esModule", { value: true });
   var def = {
@@ -4798,7 +4798,7 @@ var require_id = __commonJS(function(exports) {
   exports.default = def;
 });
 
-// node_modules/ajv/dist/vocabularies/core/ref.js
+// ../../../../../../../Users/oyvhvi/Code/opencode-subagent-for-claude/node_modules/ajv/dist/vocabularies/core/ref.js
 var require_ref = __commonJS(function(exports) {
   Object.defineProperty(exports, "__esModule", { value: true });
   exports.callRef = exports.getValidate = undefined;
@@ -4917,7 +4917,7 @@ var require_ref = __commonJS(function(exports) {
   exports.default = def;
 });
 
-// node_modules/ajv/dist/vocabularies/core/index.js
+// ../../../../../../../Users/oyvhvi/Code/opencode-subagent-for-claude/node_modules/ajv/dist/vocabularies/core/index.js
 var require_core2 = __commonJS(function(exports) {
   Object.defineProperty(exports, "__esModule", { value: true });
   var id_1 = require_id();
@@ -4935,7 +4935,7 @@ var require_core2 = __commonJS(function(exports) {
   exports.default = core;
 });
 
-// node_modules/ajv/dist/vocabularies/validation/limitNumber.js
+// ../../../../../../../Users/oyvhvi/Code/opencode-subagent-for-claude/node_modules/ajv/dist/vocabularies/validation/limitNumber.js
 var require_limitNumber = __commonJS(function(exports) {
   Object.defineProperty(exports, "__esModule", { value: true });
   var codegen_1 = require_codegen();
@@ -4964,7 +4964,7 @@ var require_limitNumber = __commonJS(function(exports) {
   exports.default = def;
 });
 
-// node_modules/ajv/dist/vocabularies/validation/multipleOf.js
+// ../../../../../../../Users/oyvhvi/Code/opencode-subagent-for-claude/node_modules/ajv/dist/vocabularies/validation/multipleOf.js
 var require_multipleOf = __commonJS(function(exports) {
   Object.defineProperty(exports, "__esModule", { value: true });
   var codegen_1 = require_codegen();
@@ -4989,7 +4989,7 @@ var require_multipleOf = __commonJS(function(exports) {
   exports.default = def;
 });
 
-// node_modules/ajv/dist/runtime/ucs2length.js
+// ../../../../../../../Users/oyvhvi/Code/opencode-subagent-for-claude/node_modules/ajv/dist/runtime/ucs2length.js
 var require_ucs2length = __commonJS(function(exports) {
   Object.defineProperty(exports, "__esModule", { value: true });
   function ucs2length(str) {
@@ -5012,7 +5012,7 @@ var require_ucs2length = __commonJS(function(exports) {
   ucs2length.code = 'require("ajv/dist/runtime/ucs2length").default';
 });
 
-// node_modules/ajv/dist/vocabularies/validation/limitLength.js
+// ../../../../../../../Users/oyvhvi/Code/opencode-subagent-for-claude/node_modules/ajv/dist/vocabularies/validation/limitLength.js
 var require_limitLength = __commonJS(function(exports) {
   Object.defineProperty(exports, "__esModule", { value: true });
   var codegen_1 = require_codegen();
@@ -5041,7 +5041,7 @@ var require_limitLength = __commonJS(function(exports) {
   exports.default = def;
 });
 
-// node_modules/ajv/dist/vocabularies/validation/pattern.js
+// ../../../../../../../Users/oyvhvi/Code/opencode-subagent-for-claude/node_modules/ajv/dist/vocabularies/validation/pattern.js
 var require_pattern = __commonJS(function(exports) {
   Object.defineProperty(exports, "__esModule", { value: true });
   var code_1 = require_code2();
@@ -5075,7 +5075,7 @@ var require_pattern = __commonJS(function(exports) {
   exports.default = def;
 });
 
-// node_modules/ajv/dist/vocabularies/validation/limitProperties.js
+// ../../../../../../../Users/oyvhvi/Code/opencode-subagent-for-claude/node_modules/ajv/dist/vocabularies/validation/limitProperties.js
 var require_limitProperties = __commonJS(function(exports) {
   Object.defineProperty(exports, "__esModule", { value: true });
   var codegen_1 = require_codegen();
@@ -5101,7 +5101,7 @@ var require_limitProperties = __commonJS(function(exports) {
   exports.default = def;
 });
 
-// node_modules/ajv/dist/vocabularies/validation/required.js
+// ../../../../../../../Users/oyvhvi/Code/opencode-subagent-for-claude/node_modules/ajv/dist/vocabularies/validation/required.js
 var require_required = __commonJS(function(exports) {
   Object.defineProperty(exports, "__esModule", { value: true });
   var code_1 = require_code2();
@@ -5180,7 +5180,7 @@ var require_required = __commonJS(function(exports) {
   exports.default = def;
 });
 
-// node_modules/ajv/dist/vocabularies/validation/limitItems.js
+// ../../../../../../../Users/oyvhvi/Code/opencode-subagent-for-claude/node_modules/ajv/dist/vocabularies/validation/limitItems.js
 var require_limitItems = __commonJS(function(exports) {
   Object.defineProperty(exports, "__esModule", { value: true });
   var codegen_1 = require_codegen();
@@ -5206,7 +5206,7 @@ var require_limitItems = __commonJS(function(exports) {
   exports.default = def;
 });
 
-// node_modules/ajv/dist/runtime/equal.js
+// ../../../../../../../Users/oyvhvi/Code/opencode-subagent-for-claude/node_modules/ajv/dist/runtime/equal.js
 var require_equal = __commonJS(function(exports) {
   Object.defineProperty(exports, "__esModule", { value: true });
   var equal = require_fast_deep_equal();
@@ -5214,7 +5214,7 @@ var require_equal = __commonJS(function(exports) {
   exports.default = equal;
 });
 
-// node_modules/ajv/dist/vocabularies/validation/uniqueItems.js
+// ../../../../../../../Users/oyvhvi/Code/opencode-subagent-for-claude/node_modules/ajv/dist/vocabularies/validation/uniqueItems.js
 var require_uniqueItems = __commonJS(function(exports) {
   Object.defineProperty(exports, "__esModule", { value: true });
   var dataType_1 = require_dataType();
@@ -5278,7 +5278,7 @@ var require_uniqueItems = __commonJS(function(exports) {
   exports.default = def;
 });
 
-// node_modules/ajv/dist/vocabularies/validation/const.js
+// ../../../../../../../Users/oyvhvi/Code/opencode-subagent-for-claude/node_modules/ajv/dist/vocabularies/validation/const.js
 var require_const = __commonJS(function(exports) {
   Object.defineProperty(exports, "__esModule", { value: true });
   var codegen_1 = require_codegen();
@@ -5304,7 +5304,7 @@ var require_const = __commonJS(function(exports) {
   exports.default = def;
 });
 
-// node_modules/ajv/dist/vocabularies/validation/enum.js
+// ../../../../../../../Users/oyvhvi/Code/opencode-subagent-for-claude/node_modules/ajv/dist/vocabularies/validation/enum.js
 var require_enum = __commonJS(function(exports) {
   Object.defineProperty(exports, "__esModule", { value: true });
   var codegen_1 = require_codegen();
@@ -5350,7 +5350,7 @@ var require_enum = __commonJS(function(exports) {
   exports.default = def;
 });
 
-// node_modules/ajv/dist/vocabularies/validation/index.js
+// ../../../../../../../Users/oyvhvi/Code/opencode-subagent-for-claude/node_modules/ajv/dist/vocabularies/validation/index.js
 var require_validation = __commonJS(function(exports) {
   Object.defineProperty(exports, "__esModule", { value: true });
   var limitNumber_1 = require_limitNumber();
@@ -5380,7 +5380,7 @@ var require_validation = __commonJS(function(exports) {
   exports.default = validation;
 });
 
-// node_modules/ajv/dist/vocabularies/applicator/additionalItems.js
+// ../../../../../../../Users/oyvhvi/Code/opencode-subagent-for-claude/node_modules/ajv/dist/vocabularies/applicator/additionalItems.js
 var require_additionalItems = __commonJS(function(exports) {
   Object.defineProperty(exports, "__esModule", { value: true });
   exports.validateAdditionalItems = undefined;
@@ -5430,7 +5430,7 @@ var require_additionalItems = __commonJS(function(exports) {
   exports.default = def;
 });
 
-// node_modules/ajv/dist/vocabularies/applicator/items.js
+// ../../../../../../../Users/oyvhvi/Code/opencode-subagent-for-claude/node_modules/ajv/dist/vocabularies/applicator/items.js
 var require_items = __commonJS(function(exports) {
   Object.defineProperty(exports, "__esModule", { value: true });
   exports.validateTuple = undefined;
@@ -5484,7 +5484,7 @@ var require_items = __commonJS(function(exports) {
   exports.default = def;
 });
 
-// node_modules/ajv/dist/vocabularies/applicator/prefixItems.js
+// ../../../../../../../Users/oyvhvi/Code/opencode-subagent-for-claude/node_modules/ajv/dist/vocabularies/applicator/prefixItems.js
 var require_prefixItems = __commonJS(function(exports) {
   Object.defineProperty(exports, "__esModule", { value: true });
   var items_1 = require_items();
@@ -5498,7 +5498,7 @@ var require_prefixItems = __commonJS(function(exports) {
   exports.default = def;
 });
 
-// node_modules/ajv/dist/vocabularies/applicator/items2020.js
+// ../../../../../../../Users/oyvhvi/Code/opencode-subagent-for-claude/node_modules/ajv/dist/vocabularies/applicator/items2020.js
 var require_items2020 = __commonJS(function(exports) {
   Object.defineProperty(exports, "__esModule", { value: true });
   var codegen_1 = require_codegen();
@@ -5530,7 +5530,7 @@ var require_items2020 = __commonJS(function(exports) {
   exports.default = def;
 });
 
-// node_modules/ajv/dist/vocabularies/applicator/contains.js
+// ../../../../../../../Users/oyvhvi/Code/opencode-subagent-for-claude/node_modules/ajv/dist/vocabularies/applicator/contains.js
 var require_contains = __commonJS(function(exports) {
   Object.defineProperty(exports, "__esModule", { value: true });
   var codegen_1 = require_codegen();
@@ -5621,7 +5621,7 @@ var require_contains = __commonJS(function(exports) {
   exports.default = def;
 });
 
-// node_modules/ajv/dist/vocabularies/applicator/dependencies.js
+// ../../../../../../../Users/oyvhvi/Code/opencode-subagent-for-claude/node_modules/ajv/dist/vocabularies/applicator/dependencies.js
 var require_dependencies = __commonJS(function(exports) {
   Object.defineProperty(exports, "__esModule", { value: true });
   exports.validateSchemaDeps = exports.validatePropertyDeps = exports.error = undefined;
@@ -5706,7 +5706,7 @@ var require_dependencies = __commonJS(function(exports) {
   exports.default = def;
 });
 
-// node_modules/ajv/dist/vocabularies/applicator/propertyNames.js
+// ../../../../../../../Users/oyvhvi/Code/opencode-subagent-for-claude/node_modules/ajv/dist/vocabularies/applicator/propertyNames.js
 var require_propertyNames = __commonJS(function(exports) {
   Object.defineProperty(exports, "__esModule", { value: true });
   var codegen_1 = require_codegen();
@@ -5746,7 +5746,7 @@ var require_propertyNames = __commonJS(function(exports) {
   exports.default = def;
 });
 
-// node_modules/ajv/dist/vocabularies/applicator/additionalProperties.js
+// ../../../../../../../Users/oyvhvi/Code/opencode-subagent-for-claude/node_modules/ajv/dist/vocabularies/applicator/additionalProperties.js
 var require_additionalProperties = __commonJS(function(exports) {
   Object.defineProperty(exports, "__esModule", { value: true });
   var code_1 = require_code2();
@@ -5849,7 +5849,7 @@ var require_additionalProperties = __commonJS(function(exports) {
   exports.default = def;
 });
 
-// node_modules/ajv/dist/vocabularies/applicator/properties.js
+// ../../../../../../../Users/oyvhvi/Code/opencode-subagent-for-claude/node_modules/ajv/dist/vocabularies/applicator/properties.js
 var require_properties = __commonJS(function(exports) {
   Object.defineProperty(exports, "__esModule", { value: true });
   var validate_1 = require_validate();
@@ -5904,7 +5904,7 @@ var require_properties = __commonJS(function(exports) {
   exports.default = def;
 });
 
-// node_modules/ajv/dist/vocabularies/applicator/patternProperties.js
+// ../../../../../../../Users/oyvhvi/Code/opencode-subagent-for-claude/node_modules/ajv/dist/vocabularies/applicator/patternProperties.js
 var require_patternProperties = __commonJS(function(exports) {
   Object.defineProperty(exports, "__esModule", { value: true });
   var code_1 = require_code2();
@@ -5975,7 +5975,7 @@ var require_patternProperties = __commonJS(function(exports) {
   exports.default = def;
 });
 
-// node_modules/ajv/dist/vocabularies/applicator/not.js
+// ../../../../../../../Users/oyvhvi/Code/opencode-subagent-for-claude/node_modules/ajv/dist/vocabularies/applicator/not.js
 var require_not = __commonJS(function(exports) {
   Object.defineProperty(exports, "__esModule", { value: true });
   var util_1 = require_util();
@@ -6003,7 +6003,7 @@ var require_not = __commonJS(function(exports) {
   exports.default = def;
 });
 
-// node_modules/ajv/dist/vocabularies/applicator/anyOf.js
+// ../../../../../../../Users/oyvhvi/Code/opencode-subagent-for-claude/node_modules/ajv/dist/vocabularies/applicator/anyOf.js
 var require_anyOf = __commonJS(function(exports) {
   Object.defineProperty(exports, "__esModule", { value: true });
   var code_1 = require_code2();
@@ -6017,7 +6017,7 @@ var require_anyOf = __commonJS(function(exports) {
   exports.default = def;
 });
 
-// node_modules/ajv/dist/vocabularies/applicator/oneOf.js
+// ../../../../../../../Users/oyvhvi/Code/opencode-subagent-for-claude/node_modules/ajv/dist/vocabularies/applicator/oneOf.js
 var require_oneOf = __commonJS(function(exports) {
   Object.defineProperty(exports, "__esModule", { value: true });
   var codegen_1 = require_codegen();
@@ -6072,7 +6072,7 @@ var require_oneOf = __commonJS(function(exports) {
   exports.default = def;
 });
 
-// node_modules/ajv/dist/vocabularies/applicator/allOf.js
+// ../../../../../../../Users/oyvhvi/Code/opencode-subagent-for-claude/node_modules/ajv/dist/vocabularies/applicator/allOf.js
 var require_allOf = __commonJS(function(exports) {
   Object.defineProperty(exports, "__esModule", { value: true });
   var util_1 = require_util();
@@ -6096,7 +6096,7 @@ var require_allOf = __commonJS(function(exports) {
   exports.default = def;
 });
 
-// node_modules/ajv/dist/vocabularies/applicator/if.js
+// ../../../../../../../Users/oyvhvi/Code/opencode-subagent-for-claude/node_modules/ajv/dist/vocabularies/applicator/if.js
 var require_if = __commonJS(function(exports) {
   Object.defineProperty(exports, "__esModule", { value: true });
   var codegen_1 = require_codegen();
@@ -6162,7 +6162,7 @@ var require_if = __commonJS(function(exports) {
   exports.default = def;
 });
 
-// node_modules/ajv/dist/vocabularies/applicator/thenElse.js
+// ../../../../../../../Users/oyvhvi/Code/opencode-subagent-for-claude/node_modules/ajv/dist/vocabularies/applicator/thenElse.js
 var require_thenElse = __commonJS(function(exports) {
   Object.defineProperty(exports, "__esModule", { value: true });
   var util_1 = require_util();
@@ -6177,7 +6177,7 @@ var require_thenElse = __commonJS(function(exports) {
   exports.default = def;
 });
 
-// node_modules/ajv/dist/vocabularies/applicator/index.js
+// ../../../../../../../Users/oyvhvi/Code/opencode-subagent-for-claude/node_modules/ajv/dist/vocabularies/applicator/index.js
 var require_applicator = __commonJS(function(exports) {
   Object.defineProperty(exports, "__esModule", { value: true });
   var additionalItems_1 = require_additionalItems();
@@ -6220,7 +6220,7 @@ var require_applicator = __commonJS(function(exports) {
   exports.default = getApplicator;
 });
 
-// node_modules/ajv/dist/vocabularies/format/format.js
+// ../../../../../../../Users/oyvhvi/Code/opencode-subagent-for-claude/node_modules/ajv/dist/vocabularies/format/format.js
 var require_format = __commonJS(function(exports) {
   Object.defineProperty(exports, "__esModule", { value: true });
   var codegen_1 = require_codegen();
@@ -6307,7 +6307,7 @@ var require_format = __commonJS(function(exports) {
   exports.default = def;
 });
 
-// node_modules/ajv/dist/vocabularies/format/index.js
+// ../../../../../../../Users/oyvhvi/Code/opencode-subagent-for-claude/node_modules/ajv/dist/vocabularies/format/index.js
 var require_format2 = __commonJS(function(exports) {
   Object.defineProperty(exports, "__esModule", { value: true });
   var format_1 = require_format();
@@ -6315,7 +6315,7 @@ var require_format2 = __commonJS(function(exports) {
   exports.default = format;
 });
 
-// node_modules/ajv/dist/vocabularies/metadata.js
+// ../../../../../../../Users/oyvhvi/Code/opencode-subagent-for-claude/node_modules/ajv/dist/vocabularies/metadata.js
 var require_metadata = __commonJS(function(exports) {
   Object.defineProperty(exports, "__esModule", { value: true });
   exports.contentVocabulary = exports.metadataVocabulary = undefined;
@@ -6335,7 +6335,7 @@ var require_metadata = __commonJS(function(exports) {
   ];
 });
 
-// node_modules/ajv/dist/vocabularies/draft7.js
+// ../../../../../../../Users/oyvhvi/Code/opencode-subagent-for-claude/node_modules/ajv/dist/vocabularies/draft7.js
 var require_draft7 = __commonJS(function(exports) {
   Object.defineProperty(exports, "__esModule", { value: true });
   var core_1 = require_core2();
@@ -6354,7 +6354,7 @@ var require_draft7 = __commonJS(function(exports) {
   exports.default = draft7Vocabularies;
 });
 
-// node_modules/ajv/dist/vocabularies/discriminator/types.js
+// ../../../../../../../Users/oyvhvi/Code/opencode-subagent-for-claude/node_modules/ajv/dist/vocabularies/discriminator/types.js
 var require_types = __commonJS(function(exports) {
   Object.defineProperty(exports, "__esModule", { value: true });
   exports.DiscrError = undefined;
@@ -6365,7 +6365,7 @@ var require_types = __commonJS(function(exports) {
   })(DiscrError || (exports.DiscrError = DiscrError = {}));
 });
 
-// node_modules/ajv/dist/vocabularies/discriminator/index.js
+// ../../../../../../../Users/oyvhvi/Code/opencode-subagent-for-claude/node_modules/ajv/dist/vocabularies/discriminator/index.js
 var require_discriminator = __commonJS(function(exports) {
   Object.defineProperty(exports, "__esModule", { value: true });
   var codegen_1 = require_codegen();
@@ -6467,7 +6467,7 @@ var require_discriminator = __commonJS(function(exports) {
   exports.default = def;
 });
 
-// node_modules/ajv/dist/refs/json-schema-draft-07.json
+// ../../../../../../../Users/oyvhvi/Code/opencode-subagent-for-claude/node_modules/ajv/dist/refs/json-schema-draft-07.json
 var require_json_schema_draft_07 = __commonJS(function(exports, module) {
   module.exports = {
     $schema: "http://json-schema.org/draft-07/schema#",
@@ -6622,7 +6622,7 @@ var require_json_schema_draft_07 = __commonJS(function(exports, module) {
   };
 });
 
-// node_modules/ajv/dist/ajv.js
+// ../../../../../../../Users/oyvhvi/Code/opencode-subagent-for-claude/node_modules/ajv/dist/ajv.js
 var require_ajv = __commonJS(function(exports, module) {
   Object.defineProperty(exports, "__esModule", { value: true });
   exports.MissingRefError = exports.ValidationError = exports.CodeGen = exports.Name = exports.nil = exports.stringify = exports.str = exports._ = exports.KeywordCxt = exports.Ajv = undefined;
@@ -6690,7 +6690,7 @@ var require_ajv = __commonJS(function(exports, module) {
   } });
 });
 
-// node_modules/ajv-formats/dist/formats.js
+// ../../../../../../../Users/oyvhvi/Code/opencode-subagent-for-claude/node_modules/ajv-formats/dist/formats.js
 var require_formats = __commonJS(function(exports) {
   Object.defineProperty(exports, "__esModule", { value: true });
   exports.formatNames = exports.fastFormats = exports.fullFormats = undefined;
@@ -6867,7 +6867,7 @@ var require_formats = __commonJS(function(exports) {
   }
 });
 
-// node_modules/ajv-formats/dist/limit.js
+// ../../../../../../../Users/oyvhvi/Code/opencode-subagent-for-claude/node_modules/ajv-formats/dist/limit.js
 var require_limit = __commonJS(function(exports) {
   Object.defineProperty(exports, "__esModule", { value: true });
   exports.formatLimitDefinition = undefined;
@@ -6936,7 +6936,7 @@ var require_limit = __commonJS(function(exports) {
   exports.default = formatLimitPlugin;
 });
 
-// node_modules/ajv-formats/dist/index.js
+// ../../../../../../../Users/oyvhvi/Code/opencode-subagent-for-claude/node_modules/ajv-formats/dist/index.js
 var require_dist = __commonJS(function(exports, module) {
   Object.defineProperty(exports, "__esModule", { value: true });
   var formats_1 = require_formats();
@@ -6975,7 +6975,7 @@ var require_dist = __commonJS(function(exports, module) {
   exports.default = formatsPlugin;
 });
 
-// node_modules/zod/v3/helpers/util.js
+// ../../../../../../../Users/oyvhvi/Code/opencode-subagent-for-claude/node_modules/zod/v3/helpers/util.js
 var util;
 (function(util) {
   util.assertEqual = (_) => {};
@@ -7106,7 +7106,7 @@ var getParsedType = (data) => {
   }
 };
 
-// node_modules/zod/v3/ZodError.js
+// ../../../../../../../Users/oyvhvi/Code/opencode-subagent-for-claude/node_modules/zod/v3/ZodError.js
 var ZodIssueCode = util.arrayToEnum([
   "invalid_type",
   "invalid_literal",
@@ -7235,7 +7235,7 @@ ZodError.create = (issues) => {
   return error;
 };
 
-// node_modules/zod/v3/locales/en.js
+// ../../../../../../../Users/oyvhvi/Code/opencode-subagent-for-claude/node_modules/zod/v3/locales/en.js
 var errorMap = (issue, _ctx) => {
   let message;
   switch (issue.code) {
@@ -7338,13 +7338,13 @@ var errorMap = (issue, _ctx) => {
 };
 var en_default = errorMap;
 
-// node_modules/zod/v3/errors.js
+// ../../../../../../../Users/oyvhvi/Code/opencode-subagent-for-claude/node_modules/zod/v3/errors.js
 var overrideErrorMap = en_default;
 function getErrorMap() {
   return overrideErrorMap;
 }
 
-// node_modules/zod/v3/helpers/parseUtil.js
+// ../../../../../../../Users/oyvhvi/Code/opencode-subagent-for-claude/node_modules/zod/v3/helpers/parseUtil.js
 var makeIssue = (params) => {
   const { data, path, errorMaps, issueData } = params;
   const fullPath = [...path, ...issueData.path || []];
@@ -7450,14 +7450,14 @@ var isDirty = (x) => x.status === "dirty";
 var isValid = (x) => x.status === "valid";
 var isAsync = (x) => typeof Promise !== "undefined" && x instanceof Promise;
 
-// node_modules/zod/v3/helpers/errorUtil.js
+// ../../../../../../../Users/oyvhvi/Code/opencode-subagent-for-claude/node_modules/zod/v3/helpers/errorUtil.js
 var errorUtil;
 (function(errorUtil) {
   errorUtil.errToObj = (message) => typeof message === "string" ? { message } : message || {};
   errorUtil.toString = (message) => typeof message === "string" ? message : message?.message;
 })(errorUtil || (errorUtil = {}));
 
-// node_modules/zod/v3/types.js
+// ../../../../../../../Users/oyvhvi/Code/opencode-subagent-for-claude/node_modules/zod/v3/types.js
 class ParseInputLazyPath {
   constructor(parent, value, path, key) {
     this._cachedPath = [];
@@ -10805,7 +10805,7 @@ var nullableType = ZodNullable.create;
 var preprocessType = ZodEffects.createWithPreprocess;
 var pipelineType = ZodPipeline.create;
 
-// node_modules/zod/v4/core/util.js
+// ../../../../../../../Users/oyvhvi/Code/opencode-subagent-for-claude/node_modules/zod/v4/core/util.js
 function getEnumValues(entries) {
   const numericValues = Object.values(entries).filter((v) => typeof v === "number");
   const values = Object.entries(entries).filter(([k, _]) => numericValues.indexOf(+k) === -1).map(([_, v]) => v);
@@ -11360,7 +11360,7 @@ function constantCatch(value) {
   return fn;
 }
 
-// node_modules/zod/v4/core/core.js
+// ../../../../../../../Users/oyvhvi/Code/opencode-subagent-for-claude/node_modules/zod/v4/core/core.js
 var _a;
 var _zodDesc = { value: undefined, enumerable: false };
 var _E = "captureStackTrace" in Error ? Error : null;
@@ -11478,7 +11478,7 @@ function config(newConfig) {
     Object.assign(globalConfig, newConfig);
   return globalConfig;
 }
-// node_modules/zod/v4/core/errors.js
+// ../../../../../../../Users/oyvhvi/Code/opencode-subagent-for-claude/node_modules/zod/v4/core/errors.js
 function _getMessage() {
   const internals = this._zod;
   internals.message ?? (internals.message = JSON.stringify(internals.def, jsonStringifyReplacer, 2));
@@ -11593,7 +11593,7 @@ function formatError(error, mapper = (issue) => issue.message) {
   return fieldErrors;
 }
 
-// node_modules/zod/v4/core/parse.js
+// ../../../../../../../Users/oyvhvi/Code/opencode-subagent-for-claude/node_modules/zod/v4/core/parse.js
 function finalizeParams(callee, params) {
   return { callee: params?.callee ?? callee, Err: params?.Err };
 }
@@ -11744,7 +11744,7 @@ var _safeEncodeAsync = (_Err) => async (schema, value, _ctx) => {
 var _safeDecodeAsync = (_Err) => async (schema, value, _ctx) => {
   return _safeParseAsync(_Err)(schema, value, _ctx);
 };
-// node_modules/zod/v4/core/regexes.js
+// ../../../../../../../Users/oyvhvi/Code/opencode-subagent-for-claude/node_modules/zod/v4/core/regexes.js
 var cuid = /^[cC][0-9a-z]{6,}$/;
 var cuid2 = /^[0-9a-z]+$/;
 var ulid = /^[0-7][0-9A-HJKMNP-TV-Za-hjkmnp-tv-z]{25}$/;
@@ -11803,7 +11803,7 @@ var _null = /^null$/i;
 var lowercase = /^[^A-Z]*$/;
 var uppercase = /^[^a-z]*$/;
 
-// node_modules/zod/v4/core/checks.js
+// ../../../../../../../Users/oyvhvi/Code/opencode-subagent-for-claude/node_modules/zod/v4/core/checks.js
 var $ZodCheck = /* @__PURE__ */ $constructor("$ZodCheck", (inst, def) => {
   var _a;
   inst._zod ?? (inst._zod = {});
@@ -12119,7 +12119,7 @@ var $ZodCheckOverwrite = /* @__PURE__ */ $constructor("$ZodCheckOverwrite", (ins
   };
 });
 
-// node_modules/zod/v4/core/doc.js
+// ../../../../../../../Users/oyvhvi/Code/opencode-subagent-for-claude/node_modules/zod/v4/core/doc.js
 class Doc {
   constructor(args = [], closed = {}) {
     this.content = [];
@@ -12161,14 +12161,14 @@ ${content.join(`
   }
 }
 
-// node_modules/zod/v4/core/versions.js
+// ../../../../../../../Users/oyvhvi/Code/opencode-subagent-for-claude/node_modules/zod/v4/core/versions.js
 var version = {
   major: 4,
   minor: 6,
   patch: 7
 };
 
-// node_modules/zod/v4/core/schemas.js
+// ../../../../../../../Users/oyvhvi/Code/opencode-subagent-for-claude/node_modules/zod/v4/core/schemas.js
 var $ZodType = /* @__PURE__ */ $constructor("$ZodType", (inst, def) => {
   var _a;
   inst ?? (inst = {});
@@ -13824,7 +13824,7 @@ function handleRefineResult(result, payload, input, inst) {
     payload.issues.push(issue(_iss));
   }
 }
-// node_modules/zod/v4/core/memoizer.js
+// ../../../../../../../Users/oyvhvi/Code/opencode-subagent-for-claude/node_modules/zod/v4/core/memoizer.js
 class $ZodCyclicError extends Error {
   constructor() {
     super(`Cannot parse a reference cycle that closes through a transform`);
@@ -14093,7 +14093,7 @@ function isBackEdge(ctx, value) {
   const backEdges = ctx[STATE]?.backEdges;
   return backEdges !== undefined && isRef(value) && backEdges.has(value);
 }
-// node_modules/zod/v4/locales/en.js
+// ../../../../../../../Users/oyvhvi/Code/opencode-subagent-for-claude/node_modules/zod/v4/locales/en.js
 var error = () => {
   const Sizable = {
     string: { unit: "characters", verb: "to have" },
@@ -14215,7 +14215,7 @@ function en_default2() {
     localeError: error()
   };
 }
-// node_modules/zod/v4/core/registries.js
+// ../../../../../../../Users/oyvhvi/Code/opencode-subagent-for-claude/node_modules/zod/v4/core/registries.js
 var _a2;
 class $ZodRegistry {
   constructor() {
@@ -14262,7 +14262,7 @@ function registry() {
 }
 (_a2 = globalThis).__zod_globalRegistry ?? (_a2.__zod_globalRegistry = registry());
 var globalRegistry = globalThis.__zod_globalRegistry;
-// node_modules/zod/v4/core/api.js
+// ../../../../../../../Users/oyvhvi/Code/opencode-subagent-for-claude/node_modules/zod/v4/core/api.js
 function snapshotChecks(def) {
   if (def.checks)
     def.checks = [...def.checks];
@@ -14727,7 +14727,7 @@ function _check(fn, params) {
   ch._zod.check = fn;
   return ch;
 }
-// node_modules/zod/v4/core/to-json-schema.js
+// ../../../../../../../Users/oyvhvi/Code/opencode-subagent-for-claude/node_modules/zod/v4/core/to-json-schema.js
 function assignProps(target, ...sources) {
   for (const source of sources) {
     for (const key of Reflect.ownKeys(source)) {
@@ -15250,7 +15250,7 @@ var createStandardJSONSchemaMethod = (schema, io, processors = {}) => (params) =
   extractDefs(ctx, schema);
   return finalize(ctx, schema);
 };
-// node_modules/zod/v4/core/json-schema-processors.js
+// ../../../../../../../Users/oyvhvi/Code/opencode-subagent-for-claude/node_modules/zod/v4/core/json-schema-processors.js
 var narrowMin = (agg, key, value) => {
   if (agg[key] === undefined || value > agg[key])
     agg[key] = value;
@@ -15993,7 +15993,7 @@ function toJSONSchema(input, params) {
   extractDefs(ctx, input);
   return finalize(ctx, input);
 }
-// node_modules/zod/v4/mini/schemas.js
+// ../../../../../../../Users/oyvhvi/Code/opencode-subagent-for-claude/node_modules/zod/v4/mini/schemas.js
 var ZodMiniType = /* @__PURE__ */ $constructor("ZodMiniType", (inst, def) => {
   if (!inst._zod)
     throw new Error("Uninitialized schema in ZodMiniType.");
@@ -16056,7 +16056,7 @@ function object(shape, params) {
   };
   return new ZodMiniObject(def);
 }
-// node_modules/@modelcontextprotocol/sdk/dist/esm/server/zod-compat.js
+// ../../../../../../../Users/oyvhvi/Code/opencode-subagent-for-claude/node_modules/@modelcontextprotocol/sdk/dist/esm/server/zod-compat.js
 function isZ4Schema(s) {
   const schema = s;
   return !!schema._zod;
@@ -16216,7 +16216,7 @@ function getLiteralValue(schema) {
     return directValue;
   return;
 }
-// node_modules/zod/v4/classic/errors.js
+// ../../../../../../../Users/oyvhvi/Code/opencode-subagent-for-claude/node_modules/zod/v4/classic/errors.js
 var _installedErrorProtos = /* @__PURE__ */ new WeakSet([Object.prototype, Error.prototype]);
 function _lazyMethod(proto, key, make) {
   Object.defineProperty(proto, key, {
@@ -16261,7 +16261,7 @@ var ZodRealError = /* @__PURE__ */ $constructor("ZodError", initializer2, undefi
   Parent: Error
 });
 
-// node_modules/zod/v4/classic/parse.js
+// ../../../../../../../Users/oyvhvi/Code/opencode-subagent-for-claude/node_modules/zod/v4/classic/parse.js
 var parse4 = /* @__PURE__ */ _parse(ZodRealError);
 var parseAsync2 = /* @__PURE__ */ _parseAsync(ZodRealError);
 var safeParse3 = /* @__PURE__ */ _safeParse(ZodRealError);
@@ -16275,7 +16275,7 @@ var safeDecode2 = /* @__PURE__ */ _safeDecode(ZodRealError);
 var safeEncodeAsync2 = /* @__PURE__ */ _safeEncodeAsync(ZodRealError);
 var safeDecodeAsync2 = /* @__PURE__ */ _safeDecodeAsync(ZodRealError);
 
-// node_modules/zod/v4/classic/schemas.js
+// ../../../../../../../Users/oyvhvi/Code/opencode-subagent-for-claude/node_modules/zod/v4/classic/schemas.js
 function _ensureDefaultLocale() {
   if (!globalConfig.localeError)
     config(en_default2());
@@ -17205,11 +17205,11 @@ function preprocess(fn, schema) {
     out: schema
   });
 }
-// node_modules/zod/v4/classic/iso.js
+// ../../../../../../../Users/oyvhvi/Code/opencode-subagent-for-claude/node_modules/zod/v4/classic/iso.js
 function datetime2(params) {
   return _isoDateTime(ZodISODateTime, params);
 }
-// node_modules/@modelcontextprotocol/sdk/dist/esm/types.js
+// ../../../../../../../Users/oyvhvi/Code/opencode-subagent-for-claude/node_modules/@modelcontextprotocol/sdk/dist/esm/types.js
 var LATEST_PROTOCOL_VERSION = "2025-11-25";
 var SUPPORTED_PROTOCOL_VERSIONS = [LATEST_PROTOCOL_VERSION, "2025-06-18", "2025-03-26", "2024-11-05", "2024-10-07"];
 var RELATED_TASK_META_KEY = "io.modelcontextprotocol/related-task";
@@ -18054,12 +18054,12 @@ class UrlElicitationRequiredError extends McpError {
   }
 }
 
-// node_modules/@modelcontextprotocol/sdk/dist/esm/experimental/tasks/interfaces.js
+// ../../../../../../../Users/oyvhvi/Code/opencode-subagent-for-claude/node_modules/@modelcontextprotocol/sdk/dist/esm/experimental/tasks/interfaces.js
 function isTerminal(status) {
   return status === "completed" || status === "failed" || status === "cancelled";
 }
 
-// node_modules/zod-to-json-schema/dist/esm/Options.js
+// ../../../../../../../Users/oyvhvi/Code/opencode-subagent-for-claude/node_modules/zod-to-json-schema/dist/esm/Options.js
 var ignoreOverride = Symbol("Let zodToJsonSchema decide on which parser to use");
 var defaultOptions = {
   name: undefined,
@@ -18092,7 +18092,7 @@ var getDefaultOptions = (options) => typeof options === "string" ? {
   ...defaultOptions,
   ...options
 };
-// node_modules/zod-to-json-schema/dist/esm/Refs.js
+// ../../../../../../../Users/oyvhvi/Code/opencode-subagent-for-claude/node_modules/zod-to-json-schema/dist/esm/Refs.js
 var getRefs = (options) => {
   const _options = getDefaultOptions(options);
   const currentPath = _options.name !== undefined ? [..._options.basePath, _options.definitionPath, _options.name] : _options.basePath;
@@ -18111,7 +18111,7 @@ var getRefs = (options) => {
     ]))
   };
 };
-// node_modules/zod-to-json-schema/dist/esm/errorMessages.js
+// ../../../../../../../Users/oyvhvi/Code/opencode-subagent-for-claude/node_modules/zod-to-json-schema/dist/esm/errorMessages.js
 function addErrorMessage(res, key, errorMessage, refs) {
   if (!refs?.errorMessages)
     return;
@@ -18126,7 +18126,7 @@ function setResponseValueAndErrors(res, key, value, errorMessage, refs) {
   res[key] = value;
   addErrorMessage(res, key, errorMessage, refs);
 }
-// node_modules/zod-to-json-schema/dist/esm/getRelativePath.js
+// ../../../../../../../Users/oyvhvi/Code/opencode-subagent-for-claude/node_modules/zod-to-json-schema/dist/esm/getRelativePath.js
 var getRelativePath = (pathA, pathB) => {
   let i = 0;
   for (;i < pathA.length && i < pathB.length; i++) {
@@ -18135,7 +18135,7 @@ var getRelativePath = (pathA, pathB) => {
   }
   return [(pathA.length - i).toString(), ...pathB.slice(i)].join("/");
 };
-// node_modules/zod-to-json-schema/dist/esm/parsers/any.js
+// ../../../../../../../Users/oyvhvi/Code/opencode-subagent-for-claude/node_modules/zod-to-json-schema/dist/esm/parsers/any.js
 function parseAnyDef(refs) {
   if (refs.target !== "openAi") {
     return {};
@@ -18151,7 +18151,7 @@ function parseAnyDef(refs) {
   };
 }
 
-// node_modules/zod-to-json-schema/dist/esm/parsers/array.js
+// ../../../../../../../Users/oyvhvi/Code/opencode-subagent-for-claude/node_modules/zod-to-json-schema/dist/esm/parsers/array.js
 function parseArrayDef(def, refs) {
   const res = {
     type: "array"
@@ -18175,7 +18175,7 @@ function parseArrayDef(def, refs) {
   return res;
 }
 
-// node_modules/zod-to-json-schema/dist/esm/parsers/bigint.js
+// ../../../../../../../Users/oyvhvi/Code/opencode-subagent-for-claude/node_modules/zod-to-json-schema/dist/esm/parsers/bigint.js
 function parseBigintDef(def, refs) {
   const res = {
     type: "integer",
@@ -18221,24 +18221,24 @@ function parseBigintDef(def, refs) {
   return res;
 }
 
-// node_modules/zod-to-json-schema/dist/esm/parsers/boolean.js
+// ../../../../../../../Users/oyvhvi/Code/opencode-subagent-for-claude/node_modules/zod-to-json-schema/dist/esm/parsers/boolean.js
 function parseBooleanDef() {
   return {
     type: "boolean"
   };
 }
 
-// node_modules/zod-to-json-schema/dist/esm/parsers/branded.js
+// ../../../../../../../Users/oyvhvi/Code/opencode-subagent-for-claude/node_modules/zod-to-json-schema/dist/esm/parsers/branded.js
 function parseBrandedDef(_def, refs) {
   return parseDef(_def.type._def, refs);
 }
 
-// node_modules/zod-to-json-schema/dist/esm/parsers/catch.js
+// ../../../../../../../Users/oyvhvi/Code/opencode-subagent-for-claude/node_modules/zod-to-json-schema/dist/esm/parsers/catch.js
 var parseCatchDef = (def, refs) => {
   return parseDef(def.innerType._def, refs);
 };
 
-// node_modules/zod-to-json-schema/dist/esm/parsers/date.js
+// ../../../../../../../Users/oyvhvi/Code/opencode-subagent-for-claude/node_modules/zod-to-json-schema/dist/esm/parsers/date.js
 function parseDateDef(def, refs, overrideDateStrategy) {
   const strategy = overrideDateStrategy ?? refs.dateStrategy;
   if (Array.isArray(strategy)) {
@@ -18283,7 +18283,7 @@ var integerDateParser = (def, refs) => {
   return res;
 };
 
-// node_modules/zod-to-json-schema/dist/esm/parsers/default.js
+// ../../../../../../../Users/oyvhvi/Code/opencode-subagent-for-claude/node_modules/zod-to-json-schema/dist/esm/parsers/default.js
 function parseDefaultDef(_def, refs) {
   return {
     ...parseDef(_def.innerType._def, refs),
@@ -18291,12 +18291,12 @@ function parseDefaultDef(_def, refs) {
   };
 }
 
-// node_modules/zod-to-json-schema/dist/esm/parsers/effects.js
+// ../../../../../../../Users/oyvhvi/Code/opencode-subagent-for-claude/node_modules/zod-to-json-schema/dist/esm/parsers/effects.js
 function parseEffectsDef(_def, refs) {
   return refs.effectStrategy === "input" ? parseDef(_def.schema._def, refs) : parseAnyDef(refs);
 }
 
-// node_modules/zod-to-json-schema/dist/esm/parsers/enum.js
+// ../../../../../../../Users/oyvhvi/Code/opencode-subagent-for-claude/node_modules/zod-to-json-schema/dist/esm/parsers/enum.js
 function parseEnumDef(def) {
   return {
     type: "string",
@@ -18304,7 +18304,7 @@ function parseEnumDef(def) {
   };
 }
 
-// node_modules/zod-to-json-schema/dist/esm/parsers/intersection.js
+// ../../../../../../../Users/oyvhvi/Code/opencode-subagent-for-claude/node_modules/zod-to-json-schema/dist/esm/parsers/intersection.js
 var isJsonSchema7AllOfType = (type) => {
   if ("type" in type && type.type === "string")
     return false;
@@ -18346,7 +18346,7 @@ function parseIntersectionDef(def, refs) {
   } : undefined;
 }
 
-// node_modules/zod-to-json-schema/dist/esm/parsers/literal.js
+// ../../../../../../../Users/oyvhvi/Code/opencode-subagent-for-claude/node_modules/zod-to-json-schema/dist/esm/parsers/literal.js
 function parseLiteralDef(def, refs) {
   const parsedType = typeof def.value;
   if (parsedType !== "bigint" && parsedType !== "number" && parsedType !== "boolean" && parsedType !== "string") {
@@ -18366,7 +18366,7 @@ function parseLiteralDef(def, refs) {
   };
 }
 
-// node_modules/zod-to-json-schema/dist/esm/parsers/string.js
+// ../../../../../../../Users/oyvhvi/Code/opencode-subagent-for-claude/node_modules/zod-to-json-schema/dist/esm/parsers/string.js
 var emojiRegex2 = undefined;
 var zodPatterns = {
   cuid: /^[cC][^\s-]{8,}$/,
@@ -18663,7 +18663,7 @@ function stringifyRegExpWithFlags(regex, refs) {
   return pattern;
 }
 
-// node_modules/zod-to-json-schema/dist/esm/parsers/record.js
+// ../../../../../../../Users/oyvhvi/Code/opencode-subagent-for-claude/node_modules/zod-to-json-schema/dist/esm/parsers/record.js
 function parseRecordDef(def, refs) {
   if (refs.target === "openAi") {
     console.warn("Warning: OpenAI may not support records in schemas! Try an array of key-value pairs instead.");
@@ -18715,7 +18715,7 @@ function parseRecordDef(def, refs) {
   return schema;
 }
 
-// node_modules/zod-to-json-schema/dist/esm/parsers/map.js
+// ../../../../../../../Users/oyvhvi/Code/opencode-subagent-for-claude/node_modules/zod-to-json-schema/dist/esm/parsers/map.js
 function parseMapDef(def, refs) {
   if (refs.mapStrategy === "record") {
     return parseRecordDef(def, refs);
@@ -18740,7 +18740,7 @@ function parseMapDef(def, refs) {
   };
 }
 
-// node_modules/zod-to-json-schema/dist/esm/parsers/nativeEnum.js
+// ../../../../../../../Users/oyvhvi/Code/opencode-subagent-for-claude/node_modules/zod-to-json-schema/dist/esm/parsers/nativeEnum.js
 function parseNativeEnumDef(def) {
   const object = def.values;
   const actualKeys = Object.keys(def.values).filter((key) => {
@@ -18754,7 +18754,7 @@ function parseNativeEnumDef(def) {
   };
 }
 
-// node_modules/zod-to-json-schema/dist/esm/parsers/never.js
+// ../../../../../../../Users/oyvhvi/Code/opencode-subagent-for-claude/node_modules/zod-to-json-schema/dist/esm/parsers/never.js
 function parseNeverDef(refs) {
   return refs.target === "openAi" ? undefined : {
     not: parseAnyDef({
@@ -18764,7 +18764,7 @@ function parseNeverDef(refs) {
   };
 }
 
-// node_modules/zod-to-json-schema/dist/esm/parsers/null.js
+// ../../../../../../../Users/oyvhvi/Code/opencode-subagent-for-claude/node_modules/zod-to-json-schema/dist/esm/parsers/null.js
 function parseNullDef(refs) {
   return refs.target === "openApi3" ? {
     enum: ["null"],
@@ -18774,7 +18774,7 @@ function parseNullDef(refs) {
   };
 }
 
-// node_modules/zod-to-json-schema/dist/esm/parsers/union.js
+// ../../../../../../../Users/oyvhvi/Code/opencode-subagent-for-claude/node_modules/zod-to-json-schema/dist/esm/parsers/union.js
 var primitiveMappings = {
   ZodString: "string",
   ZodNumber: "number",
@@ -18842,7 +18842,7 @@ var asAnyOf = (def, refs) => {
   return anyOf.length ? { anyOf } : undefined;
 };
 
-// node_modules/zod-to-json-schema/dist/esm/parsers/nullable.js
+// ../../../../../../../Users/oyvhvi/Code/opencode-subagent-for-claude/node_modules/zod-to-json-schema/dist/esm/parsers/nullable.js
 function parseNullableDef(def, refs) {
   if (["ZodString", "ZodNumber", "ZodBigInt", "ZodBoolean", "ZodNull"].includes(def.innerType._def.typeName) && (!def.innerType._def.checks || !def.innerType._def.checks.length)) {
     if (refs.target === "openApi3") {
@@ -18874,7 +18874,7 @@ function parseNullableDef(def, refs) {
   return base && { anyOf: [base, { type: "null" }] };
 }
 
-// node_modules/zod-to-json-schema/dist/esm/parsers/number.js
+// ../../../../../../../Users/oyvhvi/Code/opencode-subagent-for-claude/node_modules/zod-to-json-schema/dist/esm/parsers/number.js
 function parseNumberDef(def, refs) {
   const res = {
     type: "number"
@@ -18923,7 +18923,7 @@ function parseNumberDef(def, refs) {
   return res;
 }
 
-// node_modules/zod-to-json-schema/dist/esm/parsers/object.js
+// ../../../../../../../Users/oyvhvi/Code/opencode-subagent-for-claude/node_modules/zod-to-json-schema/dist/esm/parsers/object.js
 function parseObjectDef(def, refs) {
   const forceOptionalIntoNullable = refs.target === "openAi";
   const result = {
@@ -18993,7 +18993,7 @@ function safeIsOptional(schema) {
   }
 }
 
-// node_modules/zod-to-json-schema/dist/esm/parsers/optional.js
+// ../../../../../../../Users/oyvhvi/Code/opencode-subagent-for-claude/node_modules/zod-to-json-schema/dist/esm/parsers/optional.js
 var parseOptionalDef = (def, refs) => {
   if (refs.currentPath.toString() === refs.propertyPath?.toString()) {
     return parseDef(def.innerType._def, refs);
@@ -19012,7 +19012,7 @@ var parseOptionalDef = (def, refs) => {
   } : parseAnyDef(refs);
 };
 
-// node_modules/zod-to-json-schema/dist/esm/parsers/pipeline.js
+// ../../../../../../../Users/oyvhvi/Code/opencode-subagent-for-claude/node_modules/zod-to-json-schema/dist/esm/parsers/pipeline.js
 var parsePipelineDef = (def, refs) => {
   if (refs.pipeStrategy === "input") {
     return parseDef(def.in._def, refs);
@@ -19032,12 +19032,12 @@ var parsePipelineDef = (def, refs) => {
   };
 };
 
-// node_modules/zod-to-json-schema/dist/esm/parsers/promise.js
+// ../../../../../../../Users/oyvhvi/Code/opencode-subagent-for-claude/node_modules/zod-to-json-schema/dist/esm/parsers/promise.js
 function parsePromiseDef(def, refs) {
   return parseDef(def.type._def, refs);
 }
 
-// node_modules/zod-to-json-schema/dist/esm/parsers/set.js
+// ../../../../../../../Users/oyvhvi/Code/opencode-subagent-for-claude/node_modules/zod-to-json-schema/dist/esm/parsers/set.js
 function parseSetDef(def, refs) {
   const items = parseDef(def.valueType._def, {
     ...refs,
@@ -19057,7 +19057,7 @@ function parseSetDef(def, refs) {
   return schema;
 }
 
-// node_modules/zod-to-json-schema/dist/esm/parsers/tuple.js
+// ../../../../../../../Users/oyvhvi/Code/opencode-subagent-for-claude/node_modules/zod-to-json-schema/dist/esm/parsers/tuple.js
 function parseTupleDef(def, refs) {
   if (def.rest) {
     return {
@@ -19085,24 +19085,24 @@ function parseTupleDef(def, refs) {
   }
 }
 
-// node_modules/zod-to-json-schema/dist/esm/parsers/undefined.js
+// ../../../../../../../Users/oyvhvi/Code/opencode-subagent-for-claude/node_modules/zod-to-json-schema/dist/esm/parsers/undefined.js
 function parseUndefinedDef(refs) {
   return {
     not: parseAnyDef(refs)
   };
 }
 
-// node_modules/zod-to-json-schema/dist/esm/parsers/unknown.js
+// ../../../../../../../Users/oyvhvi/Code/opencode-subagent-for-claude/node_modules/zod-to-json-schema/dist/esm/parsers/unknown.js
 function parseUnknownDef(refs) {
   return parseAnyDef(refs);
 }
 
-// node_modules/zod-to-json-schema/dist/esm/parsers/readonly.js
+// ../../../../../../../Users/oyvhvi/Code/opencode-subagent-for-claude/node_modules/zod-to-json-schema/dist/esm/parsers/readonly.js
 var parseReadonlyDef = (def, refs) => {
   return parseDef(def.innerType._def, refs);
 };
 
-// node_modules/zod-to-json-schema/dist/esm/selectParser.js
+// ../../../../../../../Users/oyvhvi/Code/opencode-subagent-for-claude/node_modules/zod-to-json-schema/dist/esm/selectParser.js
 var selectParser = (def, typeName, refs) => {
   switch (typeName) {
     case ZodFirstPartyTypeKind.ZodString:
@@ -19180,7 +19180,7 @@ var selectParser = (def, typeName, refs) => {
   }
 };
 
-// node_modules/zod-to-json-schema/dist/esm/parseDef.js
+// ../../../../../../../Users/oyvhvi/Code/opencode-subagent-for-claude/node_modules/zod-to-json-schema/dist/esm/parseDef.js
 function parseDef(def, refs, forceResolution = false) {
   const seenItem = refs.seen.get(def);
   if (refs.override) {
@@ -19235,7 +19235,7 @@ var addMeta = (def, refs, jsonSchema) => {
   }
   return jsonSchema;
 };
-// node_modules/zod-to-json-schema/dist/esm/zodToJsonSchema.js
+// ../../../../../../../Users/oyvhvi/Code/opencode-subagent-for-claude/node_modules/zod-to-json-schema/dist/esm/zodToJsonSchema.js
 var zodToJsonSchema = (schema, options) => {
   const refs = getRefs(options);
   let definitions = typeof options === "object" && options.definitions ? Object.entries(options.definitions).reduce((acc, [name, schema]) => ({
@@ -19295,7 +19295,7 @@ var zodToJsonSchema = (schema, options) => {
   }
   return combined;
 };
-// node_modules/@modelcontextprotocol/sdk/dist/esm/server/zod-json-schema-compat.js
+// ../../../../../../../Users/oyvhvi/Code/opencode-subagent-for-claude/node_modules/@modelcontextprotocol/sdk/dist/esm/server/zod-json-schema-compat.js
 function mapMiniTarget(t) {
   if (!t)
     return "draft-7";
@@ -19337,7 +19337,7 @@ function parseWithCompat(schema, data) {
   return result.data;
 }
 
-// node_modules/@modelcontextprotocol/sdk/dist/esm/shared/protocol.js
+// ../../../../../../../Users/oyvhvi/Code/opencode-subagent-for-claude/node_modules/@modelcontextprotocol/sdk/dist/esm/shared/protocol.js
 var DEFAULT_REQUEST_TIMEOUT_MSEC = 60000;
 
 class Protocol {
@@ -20200,7 +20200,7 @@ function mergeCapabilities(base, additional) {
   return result;
 }
 
-// node_modules/@modelcontextprotocol/sdk/dist/esm/validation/ajv-provider.js
+// ../../../../../../../Users/oyvhvi/Code/opencode-subagent-for-claude/node_modules/@modelcontextprotocol/sdk/dist/esm/validation/ajv-provider.js
 var import_ajv = __toESM(require_ajv(), 1);
 var import_ajv_formats = __toESM(require_dist(), 1);
 function createDefaultAjvInstance() {
@@ -20240,7 +20240,7 @@ class AjvJsonSchemaValidator {
   }
 }
 
-// node_modules/@modelcontextprotocol/sdk/dist/esm/experimental/tasks/server.js
+// ../../../../../../../Users/oyvhvi/Code/opencode-subagent-for-claude/node_modules/@modelcontextprotocol/sdk/dist/esm/experimental/tasks/server.js
 class ExperimentalServerTasks {
   constructor(_server) {
     this._server = _server;
@@ -20318,7 +20318,7 @@ class ExperimentalServerTasks {
   }
 }
 
-// node_modules/@modelcontextprotocol/sdk/dist/esm/experimental/tasks/helpers.js
+// ../../../../../../../Users/oyvhvi/Code/opencode-subagent-for-claude/node_modules/@modelcontextprotocol/sdk/dist/esm/experimental/tasks/helpers.js
 function assertToolsCallTaskCapability(requests, method, entityName) {
   if (!requests) {
     throw new Error(`${entityName} does not support task creation (required for ${method})`);
@@ -20353,7 +20353,7 @@ function assertClientRequestTaskCapability(requests, method, entityName) {
   }
 }
 
-// node_modules/@modelcontextprotocol/sdk/dist/esm/server/index.js
+// ../../../../../../../Users/oyvhvi/Code/opencode-subagent-for-claude/node_modules/@modelcontextprotocol/sdk/dist/esm/server/index.js
 class Server extends Protocol {
   constructor(_serverInfo, options) {
     super(options);
@@ -20677,7 +20677,7 @@ class Server extends Protocol {
   }
 }
 
-// node_modules/@modelcontextprotocol/sdk/dist/esm/server/completable.js
+// ../../../../../../../Users/oyvhvi/Code/opencode-subagent-for-claude/node_modules/@modelcontextprotocol/sdk/dist/esm/server/completable.js
 var COMPLETABLE_SYMBOL = Symbol.for("mcp.completable");
 function isCompletable(schema) {
   return !!schema && typeof schema === "object" && COMPLETABLE_SYMBOL in schema;
@@ -20691,7 +20691,7 @@ var McpZodTypeKind;
   McpZodTypeKind["Completable"] = "McpCompletable";
 })(McpZodTypeKind || (McpZodTypeKind = {}));
 
-// node_modules/@modelcontextprotocol/sdk/dist/esm/shared/toolNameValidation.js
+// ../../../../../../../Users/oyvhvi/Code/opencode-subagent-for-claude/node_modules/@modelcontextprotocol/sdk/dist/esm/shared/toolNameValidation.js
 var TOOL_NAME_REGEX = /^[A-Za-z0-9._-]{1,128}$/;
 function validateToolName(name) {
   const warnings = [];
@@ -20749,7 +20749,7 @@ function validateAndWarnToolName(name) {
   return result.isValid;
 }
 
-// node_modules/@modelcontextprotocol/sdk/dist/esm/experimental/tasks/mcp-server.js
+// ../../../../../../../Users/oyvhvi/Code/opencode-subagent-for-claude/node_modules/@modelcontextprotocol/sdk/dist/esm/experimental/tasks/mcp-server.js
 class ExperimentalMcpServerTasks {
   constructor(_mcpServer) {
     this._mcpServer = _mcpServer;
@@ -20763,7 +20763,7 @@ class ExperimentalMcpServerTasks {
     return mcpServerInternal._createRegisteredTool(name, config.title, config.description, config.inputSchema, config.outputSchema, config.annotations, execution, config._meta, handler);
   }
 }
-// node_modules/@modelcontextprotocol/sdk/dist/esm/server/mcp.js
+// ../../../../../../../Users/oyvhvi/Code/opencode-subagent-for-claude/node_modules/@modelcontextprotocol/sdk/dist/esm/server/mcp.js
 function toolInputElementCount(value, max) {
   let count = 0;
   const stack = [value];
@@ -21530,10 +21530,10 @@ var EMPTY_COMPLETION_RESULT = {
   }
 };
 
-// node_modules/@modelcontextprotocol/sdk/dist/esm/server/stdio.js
+// ../../../../../../../Users/oyvhvi/Code/opencode-subagent-for-claude/node_modules/@modelcontextprotocol/sdk/dist/esm/server/stdio.js
 import process2 from "process";
 
-// node_modules/@modelcontextprotocol/sdk/dist/esm/shared/stdio.js
+// ../../../../../../../Users/oyvhvi/Code/opencode-subagent-for-claude/node_modules/@modelcontextprotocol/sdk/dist/esm/shared/stdio.js
 var STDIO_DEFAULT_MAX_BUFFER_SIZE = 10 * 1024 * 1024;
 
 class ReadBuffer {
@@ -21573,7 +21573,7 @@ function serializeMessage(message) {
 `;
 }
 
-// node_modules/@modelcontextprotocol/sdk/dist/esm/server/stdio.js
+// ../../../../../../../Users/oyvhvi/Code/opencode-subagent-for-claude/node_modules/@modelcontextprotocol/sdk/dist/esm/server/stdio.js
 class StdioServerTransport {
   constructor(_stdin = process2.stdin, _stdout = process2.stdout, options) {
     this._stdin = _stdin;
@@ -22092,6 +22092,7 @@ Your answer: what you were asked for, e.g. the verdict and each finding with fil
 var READ_RULES = `---
 Rules for this task (from your lead):
 - You are reading, not implementing. Change nothing: no edits, no commits, no installs, no commands that change files, git or the environment.
+- Do not run tests, linters, formatters, type checks or builds; your lead runs them. Read the code and reason about it.
 How to work:
 - Be quick. Every step you take is slow and costly, so take few of them.
 - Read each file you need whole, in one read, rather than in slices; most source files are small. Don't re-read what you have already read.
@@ -22102,7 +22103,7 @@ var GRUNT_RULES = `---
 Rules for this task (from your lead):
 - You are an implementer. Do only the implementation work described above, within the files it gives you. Nothing more.
 - Never commit. Leave all changes uncommitted for your lead.
-- Do not run tests, linters, formatters, type checks or builds. Your lead verifies.
+- Do not run tests, linters, formatters, type checks or builds; your lead runs them. Fixing the failures and findings your lead sends you is your job, running the checks is not.
 - Do not install, upgrade or remove anything: no packages, dependencies, tools or SDKs.
 - Do not change project or tool config (package manifests, lock files, build, CI, lint or editor config, env files) unless the task explicitly assigns that file to you.
 - Do not run any other git command that changes state (push, branch, checkout, stash, reset).
@@ -22388,7 +22389,7 @@ async function waitTask(task, waitSec) {
 // package.json
 var package_default = {
   name: "opencode-subagent-for-claude",
-  version: "0.7.0",
+  version: "0.7.1",
   description: "Claude Code plugin + MCP server that lets Claude hand work to opencode models and stay the orchestrator.",
   type: "module",
   license: "MIT",
