@@ -31,9 +31,10 @@ function bool(v: string | undefined, dflt: boolean): boolean {
   return !/^(0|false|no|off)$/i.test(v);
 }
 
+// 0 is allowed and means "no limit" for timeouts
 function int(v: string | undefined, dflt: number): number {
   const n = Number.parseInt(v ?? "", 10);
-  return Number.isFinite(n) && n > 0 ? n : dflt;
+  return Number.isFinite(n) && n >= 0 ? n : dflt;
 }
 
 const env = process.env;
@@ -45,7 +46,9 @@ export const config = {
   // used for read-only runs (auto: false) when no model is given
   readModel: model(env.OPENCODE_DELEGATE_READ_MODEL) ?? defaultModel,
   auto: bool(env.OPENCODE_DELEGATE_AUTO, true),
-  timeoutSec: int(env.OPENCODE_DELEGATE_TIMEOUT, 1800),
+  // hard cap off by default; a run is only killed once it stops producing output
+  timeoutSec: int(env.OPENCODE_DELEGATE_TIMEOUT, 0),
+  idleSec: int(env.OPENCODE_DELEGATE_IDLE_TIMEOUT, 600),
   maxOutputChars: int(env.OPENCODE_DELEGATE_MAX_OUTPUT, 40000),
   defaultCwd: env.OPENCODE_DELEGATE_CWD || env.CLAUDE_PROJECT_DIR || process.cwd(),
   // highest priority first

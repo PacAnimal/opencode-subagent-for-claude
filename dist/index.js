@@ -21671,7 +21671,7 @@ function bool(v, dflt) {
 }
 function int2(v, dflt) {
   const n = Number.parseInt(v ?? "", 10);
-  return Number.isFinite(n) && n > 0 ? n : dflt;
+  return Number.isFinite(n) && n >= 0 ? n : dflt;
 }
 var env = process.env;
 var defaultModel = model(env.OPENCODE_DELEGATE_DEFAULT_MODEL);
@@ -21680,7 +21680,8 @@ var config2 = {
   defaultModel,
   readModel: model(env.OPENCODE_DELEGATE_READ_MODEL) ?? defaultModel,
   auto: bool(env.OPENCODE_DELEGATE_AUTO, true),
-  timeoutSec: int2(env.OPENCODE_DELEGATE_TIMEOUT, 1800),
+  timeoutSec: int2(env.OPENCODE_DELEGATE_TIMEOUT, 0),
+  idleSec: int2(env.OPENCODE_DELEGATE_IDLE_TIMEOUT, 600),
   maxOutputChars: int2(env.OPENCODE_DELEGATE_MAX_OUTPUT, 40000),
   defaultCwd: env.OPENCODE_DELEGATE_CWD || env.CLAUDE_PROJECT_DIR || process.cwd(),
   preferredProviders: (env.OPENCODE_DELEGATE_PREFERRED_PROVIDERS ?? "").split(",").map((p) => p.trim().toLowerCase()).filter(Boolean)
@@ -21717,6 +21718,19 @@ function buildArgs(o) {
 function runEnv(cwd, env = process.env) {
   return cwd ? { ...env, PWD: cwd } : env;
 }
+function watchdog(ms, onFire) {
+  let timer;
+  const stop = () => clearTimeout(timer);
+  const kick = () => {
+    if (!ms)
+      return;
+    stop();
+    timer = setTimeout(onFire, ms);
+  };
+  kick();
+  return { kick, stop };
+}
+var secs = (ms) => `${Number((ms / 1000).toFixed(1))}s`;
 
 class EventCollector {
   sessionId;
@@ -21789,10 +21803,12 @@ function runOpencode(o) {
   const started = Date.now();
   const collector = new EventCollector;
   return new Promise((resolve) => {
-    const child = spawn(config2.bin, buildArgs(o), { cwd: o.cwd, env: runEnv(o.cwd), stdio: ["ignore", "pipe", "pipe"] });
+    const bin = o.bin ?? config2.bin;
+    const child = spawn(bin, buildArgs(o), { cwd: o.cwd, env: runEnv(o.cwd), stdio: ["ignore", "pipe", "pipe"] });
     let buf = "";
     let stderr = "";
     let timedOut = false;
+    let stalled = false;
     let settled = false;
     const kill = () => {
       if (child.exitCode !== null)
@@ -21800,12 +21816,17 @@ function runOpencode(o) {
       child.kill("SIGTERM");
       setTimeout(() => child.exitCode === null && child.kill("SIGKILL"), 3000).unref();
     };
-    const timer = o.timeoutMs ? setTimeout(() => {
+    const deadline = watchdog(o.timeoutMs, () => {
       timedOut = true;
       kill();
-    }, o.timeoutMs) : undefined;
+    });
+    const idle = watchdog(o.idleMs, () => {
+      timedOut = stalled = true;
+      kill();
+    });
     o.signal?.addEventListener("abort", kill, { once: true });
     child.stdout.setEncoding("utf8").on("data", (chunk) => {
+      idle.kick();
       buf += chunk;
       let i;
       while ((i = buf.indexOf(`
@@ -21821,14 +21842,16 @@ function runOpencode(o) {
       if (settled)
         return;
       settled = true;
-      if (timer)
-        clearTimeout(timer);
+      deadline.stop();
+      idle.stop();
       collector.push(buf);
       const errors = [...collector.errors];
       if (spawnError)
         errors.push(spawnError);
-      if (timedOut)
-        errors.push(`timed out after ${Math.round((o.timeoutMs ?? 0) / 1000)}s`);
+      if (stalled)
+        errors.push(`stalled: no output for ${secs(o.idleMs ?? 0)}`);
+      else if (timedOut)
+        errors.push(`timed out after ${secs(o.timeoutMs ?? 0)}`);
       else if (o.signal?.aborted)
         errors.push("cancelled");
       if (exitCode && !errors.length)
@@ -21849,7 +21872,7 @@ function runOpencode(o) {
         durationMs: Date.now() - started
       });
     };
-    child.on("error", (err) => finish(null, `failed to start '${config2.bin}': ${err.message}`));
+    child.on("error", (err) => finish(null, `failed to start '${bin}': ${err.message}`));
     child.on("close", (code) => finish(code));
   });
 }
@@ -22042,6 +22065,7 @@ async function delegate(input, signal) {
     auto,
     title: input.title,
     timeoutMs: (input.timeout_s ?? config2.timeoutSec) * 1000,
+    idleMs: config2.idleSec * 1000,
     signal
   });
   const after = before && gitStatus(cwd);
@@ -22133,7 +22157,7 @@ async function waitTask(task, waitSec) {
 // package.json
 var package_default = {
   name: "opencode-subagent-for-claude",
-  version: "0.3.0",
+  version: "0.4.0",
   description: "Claude Code plugin + MCP server that lets Claude hand work to opencode models and stay the orchestrator.",
   type: "module",
   license: "MIT",
@@ -22179,7 +22203,7 @@ var delegateShape = {
   fork: boolean2().optional().describe("Fork the session given by session_id/continue instead of appending to it."),
   auto: boolean2().optional().describe(`Auto-approve edits and shell commands that opencode's config doesn't deny. Default: ${config2.auto}. Set false for read-only work (reviews, questions, research).`),
   title: string2().optional().describe("Session title shown in opencode."),
-  timeout_s: number2().int().positive().optional().describe(`Kill the run after this many seconds. Default: ${config2.timeoutSec}.`)
+  timeout_s: number2().int().positive().optional().describe(`Hard cap in seconds. Default: ${config2.timeoutSec || "none"}. Rarely needed: a run is only killed as stuck after ${config2.idleSec}s without output, so long healthy runs are left alone.`)
 };
 server.registerTool("list_models", {
   title: "List opencode models",

@@ -94,6 +94,7 @@ export async function delegate(input: DelegateInput, signal?: AbortSignal): Prom
     auto,
     title: input.title,
     timeoutMs: (input.timeout_s ?? config.timeoutSec) * 1000,
+    idleMs: config.idleSec * 1000,
     signal,
   });
   const after = before && gitStatus(cwd);

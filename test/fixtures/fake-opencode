@@ -1,0 +1,5 @@
+#!/bin/sh
+# stands in for `opencode run`; FAKE_MODE=hang goes silent after the first event
+echo '{"type":"step_start","sessionID":"ses_fake"}'
+if [ "$FAKE_MODE" = "hang" ]; then exec sleep 30; fi
+echo '{"type":"text","part":{"text":"done"}}'

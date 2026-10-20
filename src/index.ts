@@ -46,7 +46,14 @@ const delegateShape = {
     .optional()
     .describe(`Auto-approve edits and shell commands that opencode's config doesn't deny. Default: ${config.auto}. Set false for read-only work (reviews, questions, research).`),
   title: z.string().optional().describe("Session title shown in opencode."),
-  timeout_s: z.number().int().positive().optional().describe(`Kill the run after this many seconds. Default: ${config.timeoutSec}.`),
+  timeout_s: z
+    .number()
+    .int()
+    .positive()
+    .optional()
+    .describe(
+      `Hard cap in seconds. Default: ${config.timeoutSec || "none"}. Rarely needed: a run is only killed as stuck after ${config.idleSec}s without output, so long healthy runs are left alone.`,
+    ),
 };
 
 server.registerTool(

@@ -13,7 +13,9 @@ export interface RunOptions {
   auto?: boolean;
   title?: string;
   timeoutMs?: number;
+  idleMs?: number;
   signal?: AbortSignal;
+  bin?: string;
 }
 
 export interface ToolCall {
@@ -63,6 +65,21 @@ export function buildArgs(o: RunOptions): string[] {
 export function runEnv(cwd?: string, env: NodeJS.ProcessEnv = process.env): NodeJS.ProcessEnv {
   return cwd ? { ...env, PWD: cwd } : env;
 }
+
+/** Calls onFire once nothing has kicked it for `ms`. Undefined or 0 means never. */
+export function watchdog(ms: number | undefined, onFire: () => void) {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  const stop = () => clearTimeout(timer);
+  const kick = () => {
+    if (!ms) return;
+    stop();
+    timer = setTimeout(onFire, ms);
+  };
+  kick();
+  return { kick, stop };
+}
+
+const secs = (ms: number) => `${Number((ms / 1000).toFixed(1))}s`;
 
 /** Folds `opencode run --format json` event lines into a result. Unknown events are ignored. */
 export class EventCollector {
@@ -134,10 +151,12 @@ export function runOpencode(o: RunOptions): Promise<RunResult> {
   const started = Date.now();
   const collector = new EventCollector();
   return new Promise((resolve) => {
-    const child = spawn(config.bin, buildArgs(o), { cwd: o.cwd, env: runEnv(o.cwd), stdio: ["ignore", "pipe", "pipe"] });
+    const bin = o.bin ?? config.bin;
+    const child = spawn(bin, buildArgs(o), { cwd: o.cwd, env: runEnv(o.cwd), stdio: ["ignore", "pipe", "pipe"] });
     let buf = "";
     let stderr = "";
     let timedOut = false;
+    let stalled = false;
     let settled = false;
 
     const kill = () => {
@@ -145,15 +164,19 @@ export function runOpencode(o: RunOptions): Promise<RunResult> {
       child.kill("SIGTERM");
       setTimeout(() => child.exitCode === null && child.kill("SIGKILL"), 3000).unref();
     };
-    const timer = o.timeoutMs
-      ? setTimeout(() => {
-          timedOut = true;
-          kill();
-        }, o.timeoutMs)
-      : undefined;
+    // hard cap (off by default) and stall detection: only a run that goes quiet is stuck
+    const deadline = watchdog(o.timeoutMs, () => {
+      timedOut = true;
+      kill();
+    });
+    const idle = watchdog(o.idleMs, () => {
+      timedOut = stalled = true;
+      kill();
+    });
     o.signal?.addEventListener("abort", kill, { once: true });
 
     child.stdout.setEncoding("utf8").on("data", (chunk: string) => {
+      idle.kick();
       buf += chunk;
       let i: number;
       while ((i = buf.indexOf("\n")) >= 0) {
@@ -168,11 +191,13 @@ export function runOpencode(o: RunOptions): Promise<RunResult> {
     const finish = (exitCode: number | null, spawnError?: string) => {
       if (settled) return;
       settled = true;
-      if (timer) clearTimeout(timer);
+      deadline.stop();
+      idle.stop();
       collector.push(buf);
       const errors = [...collector.errors];
       if (spawnError) errors.push(spawnError);
-      if (timedOut) errors.push(`timed out after ${Math.round((o.timeoutMs ?? 0) / 1000)}s`);
+      if (stalled) errors.push(`stalled: no output for ${secs(o.idleMs ?? 0)}`);
+      else if (timedOut) errors.push(`timed out after ${secs(o.timeoutMs ?? 0)}`);
       else if (o.signal?.aborted) errors.push("cancelled");
       if (exitCode && !errors.length) errors.push(stderr.trim().split("\n").slice(-5).join("\n") || `exit code ${exitCode}`);
       resolve({
@@ -189,7 +214,7 @@ export function runOpencode(o: RunOptions): Promise<RunResult> {
         durationMs: Date.now() - started,
       });
     };
-    child.on("error", (err) => finish(null, `failed to start '${config.bin}': ${err.message}`));
+    child.on("error", (err) => finish(null, `failed to start '${bin}': ${err.message}`));
     child.on("close", (code) => finish(code));
   });
 }

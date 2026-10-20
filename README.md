@@ -63,7 +63,8 @@ Set these in the environment Claude Code runs in, e.g. the `env` block of `~/.cl
 | `OPENCODE_DELEGATE_DEFAULT_MODEL` | opencode's default | Model used when none is given. |
 | `OPENCODE_DELEGATE_READ_MODEL` | the default model | Model for read-only runs (`auto: false`) when none is given. |
 | `OPENCODE_DELEGATE_AUTO` | `true` | Default for `auto`. |
-| `OPENCODE_DELEGATE_TIMEOUT` | `1800` | Seconds before a run is killed. |
+| `OPENCODE_DELEGATE_IDLE_TIMEOUT` | `600` | A run that produces no output for this many seconds counts as stuck and is killed. `0` disables it. |
+| `OPENCODE_DELEGATE_TIMEOUT` | `0` (none) | Optional hard cap in seconds, however busy the run is. |
 | `OPENCODE_DELEGATE_MAX_OUTPUT` | `40000` | Max response characters returned to Claude. |
 | `OPENCODE_DELEGATE_CWD` | project dir | Base directory for `cwd`. |
 | `OPENCODE_DELEGATE_PREFERRED_PROVIDERS` | none | Comma-separated provider order for models offered by several providers. |
