@@ -51,7 +51,9 @@ export const config = {
   idleSec: int(env.OPENCODE_DELEGATE_IDLE_TIMEOUT, 600),
   // compactions without a file change before a run counts as looping; 0 disables the guard
   loopCompactions: int(env.OPENCODE_DELEGATE_LOOP_COMPACTIONS, 2),
-  // resumes with a nudge per delegate call before a looping run is given up
+  // steps without a file change before an auto run counts as stalled; 0 disables the trigger
+  stallSteps: int(env.OPENCODE_DELEGATE_STALL_STEPS, 40),
+  // resumes with a nudge per delegate call before a looping or stalled run is given up
   maxNudges: int(env.OPENCODE_DELEGATE_MAX_NUDGES, 2),
   maxOutputChars: int(env.OPENCODE_DELEGATE_MAX_OUTPUT, 40000),
   defaultCwd: env.OPENCODE_DELEGATE_CWD || env.CLAUDE_PROJECT_DIR || process.cwd(),

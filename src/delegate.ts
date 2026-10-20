@@ -3,7 +3,7 @@ import { existsSync } from "node:fs";
 import { isAbsolute, resolve } from "node:path";
 import { config } from "./config.ts";
 import { resolveModelOrThrow } from "./models.ts";
-import { runOpencode, type EventCollector, type Progress, type RunOptions, type RunResult } from "./opencode.ts";
+import { formatNudges, runOpencode, type EventCollector, type Progress, type RunOptions, type RunResult } from "./opencode.ts";
 
 export interface DelegateInput {
   prompt: string;
@@ -53,7 +53,12 @@ ${REPORT_FORMAT}`;
 // sent when the loop guard resumes a session that keeps compacting without changing anything
 export const NUDGE = `Your context has been compacted {n} times without you changing any file. Stop exploring. Using your summary, make the next change now: open only the file you are about to edit, edit it, then continue with the next one.`;
 
+// sent when the stall guard resumes a session that keeps reading and thinking without changing anything
+export const STALL_NUDGE = `You have spent {n} steps without changing any file. You have investigated enough: write the first file of the change now, then continue file by file, keeping each step small. If you are blocked, stop and say why under ## Needs.`;
+
 export const nudgePrompt = (n: number) => `${NUDGE.replace("{n}", String(n))}\n\n${REPORT_FORMAT}`;
+
+export const stallPrompt = (n: number) => `${STALL_NUDGE.replace("{n}", String(n))}\n\n${REPORT_FORMAT}`;
 
 export const withGruntRules = (prompt: string) => `${prompt}\n\n${GRUNT_RULES}`;
 
@@ -85,31 +90,61 @@ export function pickModel(input: Pick<DelegateInput, "model" | "auto">, cfg = co
 }
 
 export interface GuardConfig {
-  // compactions without progress that count as looping; 0 disables the guard
+  // compactions without progress that count as looping; 0 disables the trigger
   loopCompactions: number;
+  // steps without progress that count as stalled; 0 disables the trigger
+  stallSteps: number;
+  // one budget across both triggers
   maxNudges: number;
 }
 
+// steps between git status checks while counting toward a stall
+export const STALL_STATUS_EVERY = 5;
+
 const statusKey = (cwd: string) => [...(gitStatus(cwd) ?? [])].sort().join("\n");
 
-/** checkStep for runOpencode: stops a run once it compacts `limit` times without editing or changing git status. */
-export function loopGuard(limit: number, cwd: string): (c: EventCollector) => string | undefined {
+/**
+ * checkStep for runOpencode: stops a run once it compacts `limit` times, or runs `stallSteps` steps,
+ * without editing or changing git status.
+ */
+export function loopGuard(limit: number, cwd: string, stallSteps = 0): (c: EventCollector) => string | undefined {
   let since = 0;
+  let idle = 0;
   let seenEdits = 0;
   let seenCompactions = 0;
-  let status = limit ? statusKey(cwd) : "";
-  return (c) => {
-    if (!limit) return;
-    if (c.edits > seenEdits) since = 0;
-    seenEdits = c.edits;
-    if (c.compactions === seenCompactions) return;
-    seenCompactions = c.compactions;
-    const now = statusKey(cwd);
-    if (now !== status) since = 0;
-    status = now;
-    since++;
-    return since >= limit ? `looping: compacted ${since} times without changing any file` : undefined;
+  let status = limit || stallSteps ? statusKey(cwd) : "";
+  const progressed = () => {
+    since = 0;
+    idle = 0;
   };
+  const checkStatus = () => {
+    const now = statusKey(cwd);
+    if (now !== status) progressed();
+    status = now;
+  };
+  return (c) => {
+    if (!limit && !stallSteps) return;
+    idle++;
+    if (c.edits > seenEdits) progressed();
+    seenEdits = c.edits;
+    if (limit && c.compactions !== seenCompactions) {
+      seenCompactions = c.compactions;
+      checkStatus();
+      since++;
+      if (since >= limit) return `looping: compacted ${since} times without changing any file`;
+    }
+    if (!stallSteps) return;
+    if (idle % STALL_STATUS_EVERY === 0 || idle >= stallSteps) checkStatus();
+    return idle >= stallSteps ? `stalled: ${idle} steps without changing any file` : undefined;
+  };
+}
+
+// the nudge for a run the guard stopped, by the reason it gave
+function nudgeFor(error: string | undefined, guard: GuardConfig): { prompt: string; stall: boolean } {
+  const stalled = error?.match(/stalled: (\d+) steps/);
+  if (stalled) return { prompt: stallPrompt(Number(stalled[1])), stall: true };
+  const n = Number(error?.match(/compacted (\d+) times/)?.[1] ?? guard.loopCompactions);
+  return { prompt: nudgePrompt(n), stall: false };
 }
 
 function merge(runs: RunResult[], startedAt: number): RunResult {
@@ -135,14 +170,18 @@ function merge(runs: RunResult[], startedAt: number): RunResult {
   };
 }
 
-/** Runs opencode, resuming the same session with a nudge when the loop guard stops it. */
+/** Runs opencode, resuming the same session with a nudge when the guard stops it. */
 export async function runGuarded(o: RunOptions, guard: GuardConfig, cwd = o.cwd ?? process.cwd()): Promise<RunResult> {
   const startedAt = o.startedAt ?? Date.now();
   const runs: RunResult[] = [];
   const base = { steps: 0, toolCalls: 0, edits: 0, compactions: 0 };
+  // read-only runs legitimately never edit
+  const stallSteps = o.auto ? guard.stallSteps : 0;
+  let stallNudges = 0;
   let opts: RunOptions = o;
   for (;;) {
     const nudges = runs.length;
+    const stalls = stallNudges;
     const onProgress = (p: Progress) =>
       o.onProgress?.({
         ...p,
@@ -151,8 +190,10 @@ export async function runGuarded(o: RunOptions, guard: GuardConfig, cwd = o.cwd 
         edits: base.edits + p.edits,
         compactions: base.compactions + p.compactions,
         nudges,
+        stallNudges: stalls,
       });
-    const r = await runOpencode({ ...opts, startedAt, onProgress, checkStep: loopGuard(guard.loopCompactions, cwd) });
+    const checkStep = loopGuard(guard.loopCompactions, cwd, stallSteps);
+    const r = await runOpencode({ ...opts, startedAt, onProgress, checkStep });
     runs.push(r);
     base.steps += r.steps;
     base.toolCalls += r.toolCalls.length;
@@ -160,10 +201,11 @@ export async function runGuarded(o: RunOptions, guard: GuardConfig, cwd = o.cwd 
     base.compactions += r.compactions;
     const sessionId = r.sessionId ?? opts.sessionId;
     if (!r.stopped || runs.length > guard.maxNudges || !sessionId || o.signal?.aborted) break;
-    const n = Number(r.error?.match(/compacted (\d+) times/)?.[1] ?? guard.loopCompactions);
-    opts = { ...o, prompt: nudgePrompt(n), sessionId, continueLast: false, fork: false, files: undefined, title: undefined };
+    const nudge = nudgeFor(r.error, guard);
+    if (nudge.stall) stallNudges++;
+    opts = { ...o, prompt: nudge.prompt, sessionId, continueLast: false, fork: false, files: undefined, title: undefined };
   }
-  const result = merge(runs, startedAt);
+  const result = { ...merge(runs, startedAt), stallNudges };
   if (o.signal?.aborted && result.stopped) result.error = [result.error, "cancelled"].filter(Boolean).join("; ");
   return result;
 }
@@ -183,7 +225,7 @@ export async function delegate(input: DelegateInput, signal?: AbortSignal, opts:
 
   const before = gitStatus(cwd);
   const head = gitHead(cwd);
-  const guard = opts.guard ?? { loopCompactions: config.loopCompactions, maxNudges: config.maxNudges };
+  const guard = opts.guard ?? { loopCompactions: config.loopCompactions, stallSteps: config.stallSteps, maxNudges: config.maxNudges };
   const result = await runGuarded(
     {
       prompt: withGruntRules(input.prompt),
@@ -210,6 +252,13 @@ export async function delegate(input: DelegateInput, signal?: AbortSignal, opts:
   return { model, cwd, result, changedFiles, newCommits };
 }
 
+// why the run was resumed, e.g. `2 (stall 1, compaction 1)`
+function nudgeSummary(nudges: number, stallNudges = 0): string {
+  if (!stallNudges) return `${nudges} (resumed after compacting without changes)`;
+  if (stallNudges === nudges) return `${nudges} (resumed after steps without changes)`;
+  return formatNudges(nudges, stallNudges);
+}
+
 function truncate(s: string, max: number): string {
   if (s.length <= max) return s;
   return `${s.slice(0, max)}\n\n…[truncated ${s.length - max} chars, continue the session to ask for the rest]`;
@@ -224,7 +273,7 @@ export function formatOutcome(o: DelegateOutcome, maxChars = config.maxOutputCha
     `session_id: ${r.sessionId ?? "(none)"}`,
     `cwd: ${o.cwd}`,
     `duration: ${(r.durationMs / 1000).toFixed(1)}s, steps: ${r.steps}, tokens in/out: ${t.input + t.cacheRead}/${t.output}${r.cost ? `, cost: $${r.cost.toFixed(4)}` : ""}`,
-    `edits: ${r.edits ?? 0}, compactions: ${r.compactions ?? 0}${r.nudges ? `, nudges: ${r.nudges} (resumed after compacting without changes)` : ""}`,
+    `edits: ${r.edits ?? 0}, compactions: ${r.compactions ?? 0}${r.nudges ? `, nudges: ${nudgeSummary(r.nudges, r.stallNudges)}` : ""}`,
   ];
   if (r.error) lines.push(`error: ${r.error}`);
   const needs = extractNeeds(r.text);

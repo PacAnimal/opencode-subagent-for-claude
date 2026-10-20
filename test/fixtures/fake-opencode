@@ -4,6 +4,10 @@
 #   loop: context keeps collapsing with only non-edit tools
 #   recover: like loop, but edits and finishes when resumed with --session
 #   edits: compacts, but edits between compactions
+#   stall: FAKE_STEPS (default 12) small steps with only non-edit tools, never compacting
+#   stall-recover: like stall, but edits and finishes when resumed with --session
+#   stall-loop: like stall, but loops (see loop) when resumed with --session
+#   steady: like stall, but edits every third step
 # one line per invocation, newlines in the prompt become spaces
 [ -n "$FAKE_LOG" ] && printf 'ARGS %s\n' "$(printf '%s' "$*" | tr '\n' ' ')" >> "$FAKE_LOG"
 resumed=
@@ -38,6 +42,29 @@ case "$FAKE_MODE" in
       tool edit
       step 20000
     done
+    ;;
+  stall | stall-recover | stall-loop | steady)
+    if [ "$FAKE_MODE" = "stall-recover" ] && [ -n "$resumed" ]; then
+      tool edit
+      step 1000
+      echo '{"type":"text","part":{"text":"fixed"}}'
+      exit 0
+    fi
+    if [ "$FAKE_MODE" = "stall-loop" ] && [ -n "$resumed" ]; then
+      for i in 1 2 3; do
+        tool read
+        step 100000
+        tool shell
+        step 20000
+      done
+    else
+      i=0
+      while [ "$i" -lt "${FAKE_STEPS:-12}" ]; do
+        i=$((i + 1))
+        if [ "$FAKE_MODE" = "steady" ] && [ $((i % 3)) -eq 0 ]; then tool edit; else tool read; fi
+        step 1000
+      done
+    fi
     ;;
 esac
 echo '{"type":"text","part":{"text":"done"}}'

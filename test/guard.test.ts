@@ -3,7 +3,7 @@ import { mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { loopGuard, nudgePrompt, runGuarded } from "../src/delegate.ts";
+import { loopGuard, nudgePrompt, runGuarded, stallPrompt } from "../src/delegate.ts";
 import type { EventCollector, Progress } from "../src/opencode.ts";
 
 const bin = fileURLToPath(new URL("./fixtures/fake-opencode", import.meta.url));
@@ -19,14 +19,16 @@ beforeEach(() => {
 afterEach(() => {
   delete process.env.FAKE_MODE;
   delete process.env.FAKE_LOG;
+  delete process.env.FAKE_STEPS;
   rmSync(dir, { recursive: true, force: true });
 });
 
 const calls = () => readFileSync(log, "utf8").split("\n").filter(Boolean);
-const run = (mode: string, loopCompactions = 2, maxNudges = 2, extra = {}) => {
+const run = (mode: string, loopCompactions = 2, maxNudges = 2, extra = {}, stallSteps = 0) => {
   process.env.FAKE_MODE = mode;
-  return runGuarded({ prompt: "refactor everything", bin, cwd: dir, idleMs: 60_000, ...extra }, { loopCompactions, maxNudges });
+  return runGuarded({ prompt: "refactor everything", bin, cwd: dir, idleMs: 60_000, ...extra }, { loopCompactions, stallSteps, maxNudges });
 };
+const stall = (mode: string, stallSteps = 5, maxNudges = 2, auto = true) => run(mode, 2, maxNudges, { auto }, stallSteps);
 
 describe("loop guard", () => {
   test("a looping run is resumed with a nudge and recovers", async () => {
@@ -93,6 +95,64 @@ describe("loop guard", () => {
   });
 });
 
+describe("stall guard", () => {
+  test("a stalled run is resumed with a stall nudge and recovers", async () => {
+    const r = await stall("stall-recover");
+    expect(r.ok).toBe(true);
+    expect(r.text).toBe("fixed");
+    expect(r.nudges).toBe(1);
+    expect(r.stallNudges).toBe(1);
+    expect(r.steps).toBe(5 + 1);
+    expect(r.edits).toBe(1);
+    expect(r.compactions).toBe(0);
+    const [first, second] = calls();
+    expect(first).not.toContain("--session");
+    expect(second).toContain("--session ses_fake");
+    expect(second).toEndWith(`-- ${stallPrompt(5).replaceAll("\n", " ")}`);
+  });
+  test("a run that edits periodically is never stall-nudged", async () => {
+    process.env.FAKE_STEPS = "30";
+    const r = await stall("steady");
+    expect(r.ok).toBe(true);
+    expect(r.text).toBe("done");
+    expect(r.steps).toBe(30);
+    expect(r.nudges).toBe(0);
+    expect(calls().length).toBe(1);
+  });
+  test("stallSteps 0 disables the trigger", async () => {
+    const r = await stall("stall", 0);
+    expect(r.ok).toBe(true);
+    expect(r.steps).toBe(12);
+    expect(r.nudges).toBe(0);
+    expect(calls().length).toBe(1);
+  });
+  test("read-only runs are never stall-nudged", async () => {
+    const r = await stall("stall", 5, 2, false);
+    expect(r.ok).toBe(true);
+    expect(r.steps).toBe(12);
+    expect(r.nudges).toBe(0);
+    expect(calls().length).toBe(1);
+  });
+  test("gives up after maxNudges with the stalled error", async () => {
+    const r = await stall("stall");
+    expect(r.ok).toBe(false);
+    expect(r.error).toBe("stalled: 5 steps without changing any file");
+    expect(r.sessionId).toBe("ses_fake");
+    expect(r.nudges).toBe(2);
+    expect(r.stallNudges).toBe(2);
+    expect(r.steps).toBe(3 * 5);
+    expect(calls().length).toBe(3);
+  });
+  test("stall and compaction nudges share one budget", async () => {
+    const r = await stall("stall-loop", 5, 1);
+    expect(r.ok).toBe(false);
+    expect(r.error).toBe("looping: compacted 2 times without changing any file");
+    expect(r.nudges).toBe(1);
+    expect(r.stallNudges).toBe(1);
+    expect(calls().length).toBe(2);
+  });
+});
+
 describe("loopGuard", () => {
   const state = (edits: number, compactions: number) => ({ edits, compactions }) as EventCollector;
   test("counts compactions since the last edit", () => {
@@ -105,5 +165,14 @@ describe("loopGuard", () => {
   test("0 never fires", () => {
     const check = loopGuard(0, dir);
     for (let i = 1; i < 10; i++) expect(check(state(0, i))).toBeUndefined();
+  });
+  test("counts steps since the last edit", () => {
+    const check = loopGuard(0, dir, 3);
+    expect(check(state(0, 0))).toBeUndefined();
+    expect(check(state(0, 0))).toBeUndefined();
+    expect(check(state(1, 0))).toBeUndefined();
+    expect(check(state(1, 0))).toBeUndefined();
+    expect(check(state(1, 0))).toBeUndefined();
+    expect(check(state(1, 0))).toBe("stalled: 3 steps without changing any file");
   });
 });

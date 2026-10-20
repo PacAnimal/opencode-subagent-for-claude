@@ -21683,6 +21683,7 @@ var config2 = {
   timeoutSec: int2(env.OPENCODE_DELEGATE_TIMEOUT, 0),
   idleSec: int2(env.OPENCODE_DELEGATE_IDLE_TIMEOUT, 600),
   loopCompactions: int2(env.OPENCODE_DELEGATE_LOOP_COMPACTIONS, 2),
+  stallSteps: int2(env.OPENCODE_DELEGATE_STALL_STEPS, 40),
   maxNudges: int2(env.OPENCODE_DELEGATE_MAX_NUDGES, 2),
   maxOutputChars: int2(env.OPENCODE_DELEGATE_MAX_OUTPUT, 40000),
   defaultCwd: env.OPENCODE_DELEGATE_CWD || env.CLAUDE_PROJECT_DIR || process.cwd(),
@@ -21825,10 +21826,15 @@ class EventCollector {
   }
 }
 var kTokens = (n) => `${Math.round(n / 1000)}k`;
+function formatNudges(nudges, stallNudges = 0) {
+  if (!stallNudges)
+    return String(nudges);
+  return `${nudges} (stall ${stallNudges}, compaction ${nudges - stallNudges})`;
+}
 function formatProgress(p, now = Date.now()) {
   const parts = [`steps ${p.steps}`, `tools ${p.toolCalls}`, `edits ${p.edits}`, `compactions ${p.compactions}`, `ctx ${kTokens(p.contextTokens)}`];
   if (p.nudges)
-    parts.push(`nudges ${p.nudges}`);
+    parts.push(`nudges ${formatNudges(p.nudges, p.stallNudges)}`);
   if (p.lastEventAt)
     parts.push(`last activity ${Math.max(0, Math.round((now - p.lastEventAt) / 1000))}s ago`);
   return parts.join("  ");
@@ -22076,7 +22082,11 @@ How to work:
 - Change files with the edit/write tools, not shell redirection.
 ${REPORT_FORMAT}`;
 var NUDGE = `Your context has been compacted {n} times without you changing any file. Stop exploring. Using your summary, make the next change now: open only the file you are about to edit, edit it, then continue with the next one.`;
+var STALL_NUDGE = `You have spent {n} steps without changing any file. You have investigated enough: write the first file of the change now, then continue file by file, keeping each step small. If you are blocked, stop and say why under ## Needs.`;
 var nudgePrompt = (n) => `${NUDGE.replace("{n}", String(n))}
+
+${REPORT_FORMAT}`;
+var stallPrompt = (n) => `${STALL_NUDGE.replace("{n}", String(n))}
 
 ${REPORT_FORMAT}`;
 var withGruntRules = (prompt) => `${prompt}
@@ -22108,29 +22118,52 @@ function pickModel(input, cfg = config2) {
     return input.model;
   return input.auto ?? cfg.auto ? cfg.defaultModel : cfg.readModel;
 }
+var STALL_STATUS_EVERY = 5;
 var statusKey = (cwd) => [...gitStatus(cwd) ?? []].sort().join(`
 `);
-function loopGuard(limit, cwd) {
+function loopGuard(limit, cwd, stallSteps = 0) {
   let since = 0;
+  let idle = 0;
   let seenEdits = 0;
   let seenCompactions = 0;
-  let status = limit ? statusKey(cwd) : "";
-  return (c) => {
-    if (!limit)
-      return;
-    if (c.edits > seenEdits)
-      since = 0;
-    seenEdits = c.edits;
-    if (c.compactions === seenCompactions)
-      return;
-    seenCompactions = c.compactions;
+  let status = limit || stallSteps ? statusKey(cwd) : "";
+  const progressed = () => {
+    since = 0;
+    idle = 0;
+  };
+  const checkStatus = () => {
     const now = statusKey(cwd);
     if (now !== status)
-      since = 0;
+      progressed();
     status = now;
-    since++;
-    return since >= limit ? `looping: compacted ${since} times without changing any file` : undefined;
   };
+  return (c) => {
+    if (!limit && !stallSteps)
+      return;
+    idle++;
+    if (c.edits > seenEdits)
+      progressed();
+    seenEdits = c.edits;
+    if (limit && c.compactions !== seenCompactions) {
+      seenCompactions = c.compactions;
+      checkStatus();
+      since++;
+      if (since >= limit)
+        return `looping: compacted ${since} times without changing any file`;
+    }
+    if (!stallSteps)
+      return;
+    if (idle % STALL_STATUS_EVERY === 0 || idle >= stallSteps)
+      checkStatus();
+    return idle >= stallSteps ? `stalled: ${idle} steps without changing any file` : undefined;
+  };
+}
+function nudgeFor(error, guard) {
+  const stalled = error?.match(/stalled: (\d+) steps/);
+  if (stalled)
+    return { prompt: stallPrompt(Number(stalled[1])), stall: true };
+  const n = Number(error?.match(/compacted (\d+) times/)?.[1] ?? guard.loopCompactions);
+  return { prompt: nudgePrompt(n), stall: false };
 }
 function merge2(runs, startedAt) {
   const last = runs[runs.length - 1];
@@ -22158,18 +22191,23 @@ async function runGuarded(o, guard, cwd = o.cwd ?? process.cwd()) {
   const startedAt = o.startedAt ?? Date.now();
   const runs = [];
   const base = { steps: 0, toolCalls: 0, edits: 0, compactions: 0 };
+  const stallSteps = o.auto ? guard.stallSteps : 0;
+  let stallNudges = 0;
   let opts = o;
   for (;; ) {
     const nudges = runs.length;
+    const stalls = stallNudges;
     const onProgress = (p) => o.onProgress?.({
       ...p,
       steps: base.steps + p.steps,
       toolCalls: base.toolCalls + p.toolCalls,
       edits: base.edits + p.edits,
       compactions: base.compactions + p.compactions,
-      nudges
+      nudges,
+      stallNudges: stalls
     });
-    const r = await runOpencode({ ...opts, startedAt, onProgress, checkStep: loopGuard(guard.loopCompactions, cwd) });
+    const checkStep = loopGuard(guard.loopCompactions, cwd, stallSteps);
+    const r = await runOpencode({ ...opts, startedAt, onProgress, checkStep });
     runs.push(r);
     base.steps += r.steps;
     base.toolCalls += r.toolCalls.length;
@@ -22178,10 +22216,12 @@ async function runGuarded(o, guard, cwd = o.cwd ?? process.cwd()) {
     const sessionId = r.sessionId ?? opts.sessionId;
     if (!r.stopped || runs.length > guard.maxNudges || !sessionId || o.signal?.aborted)
       break;
-    const n = Number(r.error?.match(/compacted (\d+) times/)?.[1] ?? guard.loopCompactions);
-    opts = { ...o, prompt: nudgePrompt(n), sessionId, continueLast: false, fork: false, files: undefined, title: undefined };
+    const nudge = nudgeFor(r.error, guard);
+    if (nudge.stall)
+      stallNudges++;
+    opts = { ...o, prompt: nudge.prompt, sessionId, continueLast: false, fork: false, files: undefined, title: undefined };
   }
-  const result = merge2(runs, startedAt);
+  const result = { ...merge2(runs, startedAt), stallNudges };
   if (o.signal?.aborted && result.stopped)
     result.error = [result.error, "cancelled"].filter(Boolean).join("; ");
   return result;
@@ -22196,7 +22236,7 @@ async function delegate(input, signal, opts = {}) {
   const files = input.files?.map((f) => isAbsolute(f) ? f : resolve(cwd, f));
   const before = gitStatus(cwd);
   const head = gitHead(cwd);
-  const guard = opts.guard ?? { loopCompactions: config2.loopCompactions, maxNudges: config2.maxNudges };
+  const guard = opts.guard ?? { loopCompactions: config2.loopCompactions, stallSteps: config2.stallSteps, maxNudges: config2.maxNudges };
   const result = await runGuarded({
     prompt: withGruntRules(input.prompt),
     model,
@@ -22218,6 +22258,13 @@ async function delegate(input, signal, opts = {}) {
   const newCommits = head ? commitsSince(cwd, head) : undefined;
   return { model, cwd, result, changedFiles, newCommits };
 }
+function nudgeSummary(nudges, stallNudges = 0) {
+  if (!stallNudges)
+    return `${nudges} (resumed after compacting without changes)`;
+  if (stallNudges === nudges)
+    return `${nudges} (resumed after steps without changes)`;
+  return formatNudges(nudges, stallNudges);
+}
 function truncate(s, max) {
   if (s.length <= max)
     return s;
@@ -22234,7 +22281,7 @@ function formatOutcome(o, maxChars = config2.maxOutputChars) {
     `session_id: ${r.sessionId ?? "(none)"}`,
     `cwd: ${o.cwd}`,
     `duration: ${(r.durationMs / 1000).toFixed(1)}s, steps: ${r.steps}, tokens in/out: ${t.input + t.cacheRead}/${t.output}${r.cost ? `, cost: $${r.cost.toFixed(4)}` : ""}`,
-    `edits: ${r.edits ?? 0}, compactions: ${r.compactions ?? 0}${r.nudges ? `, nudges: ${r.nudges} (resumed after compacting without changes)` : ""}`
+    `edits: ${r.edits ?? 0}, compactions: ${r.compactions ?? 0}${r.nudges ? `, nudges: ${nudgeSummary(r.nudges, r.stallNudges)}` : ""}`
   ];
   if (r.error)
     lines.push(`error: ${r.error}`);
@@ -22303,7 +22350,7 @@ async function waitTask(task, waitSec) {
 // package.json
 var package_default = {
   name: "opencode-subagent-for-claude",
-  version: "0.5.0",
+  version: "0.6.0",
   description: "Claude Code plugin + MCP server that lets Claude hand work to opencode models and stay the orchestrator.",
   type: "module",
   license: "MIT",

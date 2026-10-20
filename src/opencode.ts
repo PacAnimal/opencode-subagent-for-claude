@@ -31,6 +31,8 @@ export interface Progress {
   contextTokens: number;
   lastEventAt?: number;
   nudges?: number;
+  // how many of the nudges were for stalling, the rest were for compacting
+  stallNudges?: number;
 }
 
 export interface ToolCall {
@@ -57,8 +59,10 @@ export interface RunResult {
   steps: number;
   edits: number;
   compactions: number;
-  // resumes forced by the loop guard
+  // resumes forced by the guard
   nudges?: number;
+  // how many of the nudges were for stalling, the rest were for compacting
+  stallNudges?: number;
   // stopped by checkStep
   stopped?: boolean;
   error?: string;
@@ -197,10 +201,16 @@ export class EventCollector {
 
 const kTokens = (n: number) => `${Math.round(n / 1000)}k`;
 
+/** e.g. `2 (stall 1, compaction 1)`; kinds only once a stall nudge happened. */
+export function formatNudges(nudges: number, stallNudges = 0): string {
+  if (!stallNudges) return String(nudges);
+  return `${nudges} (stall ${stallNudges}, compaction ${nudges - stallNudges})`;
+}
+
 /** One line for a running task, e.g. `steps 94  tools 100  edits 0  compactions 2  ctx 20k  last activity 12s ago`. */
 export function formatProgress(p: Progress, now = Date.now()): string {
   const parts = [`steps ${p.steps}`, `tools ${p.toolCalls}`, `edits ${p.edits}`, `compactions ${p.compactions}`, `ctx ${kTokens(p.contextTokens)}`];
-  if (p.nudges) parts.push(`nudges ${p.nudges}`);
+  if (p.nudges) parts.push(`nudges ${formatNudges(p.nudges, p.stallNudges)}`);
   if (p.lastEventAt) parts.push(`last activity ${Math.max(0, Math.round((now - p.lastEventAt) / 1000))}s ago`);
   return parts.join("  ");
 }
