@@ -1,8 +1,8 @@
 # opencode-subagent-for-claude
 
-A Claude Code plugin that lets Claude hand work to any model in your [opencode](https://opencode.ai) install, and nudges it to do so.
+A Claude Code plugin that lets Claude hand work to any model in your [opencode](https://opencode.ai) install.
 
-opencode runs on its own providers and billing, so the token-heavy part of a task (reading lots of code, writing it, iterating on tests) doesn't eat Claude's context or usage limits. Claude stays the orchestrator. It writes the brief, starts the run, reviews the diff and runs the tests.
+It's opt-in. Claude leaves opencode alone until you ask for it ("use opencode for this"). From then on it has to route every piece of work it can through opencode, and only orchestrates: it writes the brief, starts the run, reviews the diff and runs the tests.
 
 ```
 Claude Code ──MCP (stdio)──▶ opencode-delegate server (Bun) ──spawns──▶ opencode run --format json [--auto] …
@@ -13,8 +13,8 @@ It shells out to the `opencode` CLI, so your existing opencode auth, providers, 
 ## What you get
 
 - **MCP tools**: `delegate`, `delegate_async`, `task_result`, `task_list`, `task_cancel`, `list_models`, `list_sessions`
-- **Nudges**: the server's MCP instructions and a SessionStart hook tell Claude to delegate token-heavy work by default
-- **`opencode-delegate` skill**: when and how to delegate, how to brief, how to review
+- **Opt-in rule**: the server's MCP instructions tell Claude never to use it unasked, and to use it for everything it can once asked
+- **`opencode-delegate` skill**: the opt-in rule, and how to delegate, how to brief, how to review
 - **`opencode-worker` subagent**: delegate, verify, iterate, report, for workflows and fan-out
 - **`/opencode` command**: `/opencode write tests for src/date.ts`, or `/opencode kimi k3 -- …` to pick a model
 

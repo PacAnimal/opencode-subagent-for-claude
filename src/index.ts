@@ -11,10 +11,9 @@ import { getTask, listTasks, startTask, waitTask, type Task } from "./tasks.ts";
 import pkg from "../package.json" with { type: "json" };
 
 // shown to the host model in its system prompt
-const INSTRUCTIONS = `Delegate to opencode by default. opencode runs on its own provider and billing, so work done there costs none of this session's context or usage budget.
-Use delegate_async (or delegate for short jobs) for anything token-heavy that doesn't need your judgment on every step: implementing a well-understood change, writing tests, refactors, broad code reading/research, summarising large files or logs, second-opinion reviews (auto: false).
-You stay the orchestrator: write a self-contained brief (the model can't see this conversation), then review the git changes and run the tests yourself before reporting.
-Keep for yourself: decisions that need this conversation's context, tiny edits cheaper to do than to brief, and anything security-sensitive.`;
+const INSTRUCTIONS = `Opt-in only. Never use these tools unless the user has asked you to use opencode.
+Once they have, it is mandatory: route every piece of work you can through opencode for as long as that instruction stands (implementation, tests, refactors, code reading, research, reviews with auto: false). Only do work yourself that can't be delegated: orchestration, briefing, reviewing results and talking to the user.
+Write a self-contained brief (the model can't see this conversation), then review the git changes and run the tests yourself before reporting.`;
 
 const server = new McpServer({ name: "opencode-delegate", version: pkg.version }, { instructions: INSTRUCTIONS });
 
@@ -75,7 +74,7 @@ server.registerTool(
   {
     title: "Delegate a task to opencode",
     description:
-      "Hand a task to an opencode model and wait for it. It works in `cwd` with its own read/edit/shell tools, so it can implement, not just answer, and it doesn't spend this session's tokens. Returns its final answer, session_id, token usage and git changes. Review the changes afterwards. Prefer delegate_async for anything longer than a few minutes.",
+      "Hand a task to an opencode model and wait for it. It works in `cwd` with its own read/edit/shell tools, so it can implement, not just answer. Only use when the user has asked for opencode. Returns its final answer, session_id, token usage and git changes. Review the changes afterwards. Prefer delegate_async for anything longer than a few minutes.",
     inputSchema: delegateShape,
   },
   async (input, extra) => {

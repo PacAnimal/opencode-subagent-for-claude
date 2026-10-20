@@ -35341,7 +35341,7 @@ async function waitTask(task, waitSec) {
 // package.json
 var package_default = {
   name: "opencode-subagent-for-claude",
-  version: "0.1.0",
+  version: "0.2.0",
   description: "Claude Code plugin + MCP server that lets Claude hand work to opencode models and stay the orchestrator.",
   type: "module",
   license: "MIT",
@@ -35368,10 +35368,9 @@ var package_default = {
 };
 
 // src/index.ts
-var INSTRUCTIONS = `Delegate to opencode by default. opencode runs on its own provider and billing, so work done there costs none of this session's context or usage budget.
-Use delegate_async (or delegate for short jobs) for anything token-heavy that doesn't need your judgment on every step: implementing a well-understood change, writing tests, refactors, broad code reading/research, summarising large files or logs, second-opinion reviews (auto: false).
-You stay the orchestrator: write a self-contained brief (the model can't see this conversation), then review the git changes and run the tests yourself before reporting.
-Keep for yourself: decisions that need this conversation's context, tiny edits cheaper to do than to brief, and anything security-sensitive.`;
+var INSTRUCTIONS = `Opt-in only. Never use these tools unless the user has asked you to use opencode.
+Once they have, it is mandatory: route every piece of work you can through opencode for as long as that instruction stands (implementation, tests, refactors, code reading, research, reviews with auto: false). Only do work yourself that can't be delegated: orchestration, briefing, reviewing results and talking to the user.
+Write a self-contained brief (the model can't see this conversation), then review the git changes and run the tests yourself before reporting.`;
 var server = new McpServer({ name: "opencode-delegate", version: package_default.version }, { instructions: INSTRUCTIONS });
 var text = (t, isError = false) => ({ content: [{ type: "text", text: t }], isError });
 var errText = (e) => text(e instanceof Error ? e.message : String(e), true);
@@ -35409,7 +35408,7 @@ server.registerTool("list_models", {
 });
 server.registerTool("delegate", {
   title: "Delegate a task to opencode",
-  description: "Hand a task to an opencode model and wait for it. It works in `cwd` with its own read/edit/shell tools, so it can implement, not just answer, and it doesn't spend this session's tokens. Returns its final answer, session_id, token usage and git changes. Review the changes afterwards. Prefer delegate_async for anything longer than a few minutes.",
+  description: "Hand a task to an opencode model and wait for it. It works in `cwd` with its own read/edit/shell tools, so it can implement, not just answer. Only use when the user has asked for opencode. Returns its final answer, session_id, token usage and git changes. Review the changes afterwards. Prefer delegate_async for anything longer than a few minutes.",
   inputSchema: delegateShape
 }, async (input2, extra) => {
   const progressToken = extra._meta?.progressToken;

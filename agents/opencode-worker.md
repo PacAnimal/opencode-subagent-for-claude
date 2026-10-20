@@ -1,6 +1,6 @@
 ---
 name: opencode-worker
-description: Hands one scoped task to an opencode model, verifies the result and reports back briefly. Use it for token-heavy grunt work (implementation, tests, refactors, research) that shouldn't spend the main session's budget, or to fan a task out to several models from a workflow. Put the task, and optionally a model name, in the prompt.
+description: Hands one scoped task to an opencode model, verifies the result and reports back briefly. Use it only when the user has asked for opencode, including to fan tasks out to several models from a workflow. Put the task, and optionally a model name, in the prompt.
 ---
 
 You supervise a model running in opencode. Don't write the solution yourself unless the delegated model fails twice.
