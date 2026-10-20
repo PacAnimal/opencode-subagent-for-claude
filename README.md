@@ -53,7 +53,9 @@ opencode compacts a session when its context fills. A grunt that keeps reading f
 
 - **Live progress**: `task_list` and `task_result` show what a running task is doing, e.g. `running 2065s  steps 94  tools 100  edits 0  compactions 2  ctx 20k  last activity 12s ago`. `task_result` with `wait_s` and `delegate` send this as a progress notification every 15s, which also keeps clients from timing out.
 - **Loop guard**: a compaction shows up as the context size collapsing between steps. Once a run compacts `OPENCODE_DELEGATE_LOOP_COMPACTIONS` times without an edit or any change in `git status`, it's stopped and the same session is resumed with a nudge to make the next change now. After `OPENCODE_DELEGATE_MAX_NUDGES` nudges it gives up with `looping: …`, keeping the session_id so Claude can continue it. All runs add up to one result, which reports edits, compactions and nudges.
-- **Stall guard**: with a large context a run can read and think for dozens of steps without ever compacting or editing. Once an auto run goes `OPENCODE_DELEGATE_STALL_STEPS` steps without an edit or any change in `git status` (checked every few steps), it's stopped and the same session is resumed with a nudge to write the first file now and continue file by file. The count restarts after each nudge. Stall and loop nudges share the `OPENCODE_DELEGATE_MAX_NUDGES` budget; when it runs out the run gives up with `stalled: …`. Read-only runs (`auto: false`) are never stall-nudged.
+- **Stall guard**: with a large context a run can read and think for dozens of steps without ever compacting or editing. Once an auto run goes `OPENCODE_DELEGATE_STALL_STEPS` steps without an edit or any change in `git status` (checked every few steps), it's stopped and the same session is resumed with a nudge to write the first file now and continue file by file. The count restarts after each nudge. Stall and loop nudges share the `OPENCODE_DELEGATE_MAX_NUDGES` budget; when it runs out the run gives up with `stalled: …`. Read-only runs (`auto: false`) are never stall-nudged; they have a read budget instead.
+- **Read budget**: read-only runs get reader rules instead of the grunt rules: change nothing, read whole files once, put independent reads in parallel, answer as soon as possible. Once one takes `OPENCODE_DELEGATE_READ_STEPS` steps it's stopped and resumed with a nudge to write its answer now from what it has. It shares the `OPENCODE_DELEGATE_MAX_NUDGES` budget and gives up with `over budget: …`.
+- **Stopping for real**: opencode v2 runs sessions on its background service, which keeps going after the `opencode run` client is killed. Whenever a run is stopped (cancelled, idle, timed out or stopped by a guard), its session is interrupted on the service too, before any nudge resumes it.
 
 ## Model names
 
@@ -61,7 +63,7 @@ Pass exact ids (`openrouter/kimi-k3`) or loose names (`kimi k3`, `opus 5.5`). Wh
 
 ## Permissions
 
-Runs use `--auto` by default. The model edits files and runs commands without asking, but anything your opencode config denies stays denied. Pass `auto: false` (or set `OPENCODE_DELEGATE_AUTO=false`) for read-only runs.
+Runs use `--auto` by default. The model edits files and runs commands without asking, but anything your opencode config denies stays denied. Pass `auto: false` (or set `OPENCODE_DELEGATE_AUTO=false`) for read-only runs such as reviews; they get the reader rules and read budget above.
 
 ## Configuration
 
@@ -77,6 +79,7 @@ Set these in the environment Claude Code runs in, e.g. the `env` block of `~/.cl
 | `OPENCODE_DELEGATE_TIMEOUT` | `0` (none) | Optional hard cap in seconds, however busy the run is. |
 | `OPENCODE_DELEGATE_LOOP_COMPACTIONS` | `2` | Compactions without a file change before a run counts as looping and gets nudged. `0` disables the loop guard. |
 | `OPENCODE_DELEGATE_STALL_STEPS` | `40` | Steps without a file change before an auto run counts as stalled and gets nudged. `0` disables the stall guard. |
+| `OPENCODE_DELEGATE_READ_STEPS` | `30` | Steps a read-only run takes before it's told to answer now. `0` disables the read budget. |
 | `OPENCODE_DELEGATE_MAX_NUDGES` | `4` | Nudged resumes per task (loop and stall nudges together) before a run is given up. |
 | `OPENCODE_DELEGATE_MAX_OUTPUT` | `40000` | Max response characters returned to Claude. |
 | `OPENCODE_DELEGATE_CWD` | project dir | Base directory for `cwd`. |

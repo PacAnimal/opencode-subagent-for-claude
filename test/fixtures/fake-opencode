@@ -10,6 +10,11 @@
 #   steady: like stall, but edits every third step
 # one line per invocation, newlines in the prompt become spaces
 [ -n "$FAKE_LOG" ] && printf 'ARGS %s\n' "$(printf '%s' "$*" | tr '\n' ' ')" >> "$FAKE_LOG"
+# `api session.interrupt` stands in for the background service stopping a session
+if [ "$1" = "api" ]; then
+  echo '{"interrupted":true}'
+  exit 0
+fi
 resumed=
 for a in "$@"; do
   [ "$a" = "--" ] && break

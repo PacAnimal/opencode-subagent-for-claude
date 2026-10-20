@@ -34,7 +34,25 @@ Exactly what you need from your lead and why: a tool to install, a config change
 ## Result
 A short summary: files changed, and anything left undone.`;
 
-// appended to every brief; the lead (Claude) verifies and handles anything environmental
+// the report format every read-only run ends with
+export const READ_REPORT_FORMAT = `- End your reply with these two sections, in this order:
+## Needs
+Anything you could not check without help from your lead (a tool, access, a decision), and why. Write "none" only if there is nothing.
+## Result
+Your answer: what you were asked for, e.g. the verdict and each finding with file:line.`;
+
+// appended to every read-only brief (auto: false): reviews, questions, research
+export const READ_RULES = `---
+Rules for this task (from your lead):
+- You are reading, not implementing. Change nothing: no edits, no commits, no installs, no commands that change files, git or the environment.
+How to work:
+- Be quick. Every step you take is slow and costly, so take few of them.
+- Read each file you need whole, in one read, rather than in slices; most source files are small. Don't re-read what you have already read.
+- Put independent reads and searches in the same step, as parallel tool calls.
+- Answer as soon as you can. Don't keep checking a conclusion you have already reached.
+${READ_REPORT_FORMAT}`;
+
+// appended to every editing brief; the lead (Claude) verifies and handles anything environmental
 export const GRUNT_RULES = `---
 Rules for this task (from your lead):
 - You are an implementer. Do only the implementation work described above, within the files it gives you. Nothing more.
@@ -56,11 +74,16 @@ export const NUDGE = `Your context has been compacted {n} times without you chan
 // sent when the stall guard resumes a session that keeps reading and thinking without changing anything
 export const STALL_NUDGE = `You have spent {n} steps without changing any file. You have investigated enough: write the first file of the change now, then continue file by file, keeping each step small. If you are blocked, stop and say why under ## Needs.`;
 
+// sent when the read budget runs out on a read-only run
+export const WRAP_UP = `You have spent {n} steps reading. Stop investigating and write your answer now from what you have. Mark anything you could not confirm as unconfirmed rather than reading further.`;
+
 export const nudgePrompt = (n: number) => `${NUDGE.replace("{n}", String(n))}\n\n${REPORT_FORMAT}`;
 
 export const stallPrompt = (n: number) => `${STALL_NUDGE.replace("{n}", String(n))}\n\n${REPORT_FORMAT}`;
 
-export const withGruntRules = (prompt: string) => `${prompt}\n\n${GRUNT_RULES}`;
+export const wrapUpPrompt = (n: number) => `${WRAP_UP.replace("{n}", String(n))}\n\n${READ_REPORT_FORMAT}`;
+
+export const withRules = (prompt: string, auto: boolean) => `${prompt}\n\n${auto ? GRUNT_RULES : READ_RULES}`;
 
 export function extractNeeds(text: string): string | undefined {
   const m = text.match(/^## Needs[ \t]*\n([\s\S]*?)(?=^## |(?![\s\S]))/m);
@@ -94,6 +117,8 @@ export interface GuardConfig {
   loopCompactions: number;
   // steps without progress that count as stalled; 0 disables the trigger
   stallSteps: number;
+  // steps a read-only run may take before it is told to answer; 0 disables the trigger
+  readSteps: number;
   // one budget across both triggers
   maxNudges: number;
 }
@@ -140,9 +165,9 @@ export function loopGuard(limit: number, cwd: string, stallSteps = 0): (c: Event
 }
 
 // the nudge for a run the guard stopped, by the reason it gave
-function nudgeFor(error: string | undefined, guard: GuardConfig): { prompt: string; stall: boolean } {
+function nudgeFor(error: string | undefined, guard: GuardConfig, readOnly: boolean): { prompt: string; stall: boolean } {
   const stalled = error?.match(/stalled: (\d+) steps/);
-  if (stalled) return { prompt: stallPrompt(Number(stalled[1])), stall: true };
+  if (stalled) return { prompt: readOnly ? wrapUpPrompt(Number(stalled[1])) : stallPrompt(Number(stalled[1])), stall: true };
   const n = Number(error?.match(/compacted (\d+) times/)?.[1] ?? guard.loopCompactions);
   return { prompt: nudgePrompt(n), stall: false };
 }
@@ -175,8 +200,9 @@ export async function runGuarded(o: RunOptions, guard: GuardConfig, cwd = o.cwd 
   const startedAt = o.startedAt ?? Date.now();
   const runs: RunResult[] = [];
   const base = { steps: 0, toolCalls: 0, edits: 0, compactions: 0 };
-  // read-only runs legitimately never edit
-  const stallSteps = o.auto ? guard.stallSteps : 0;
+  // read-only runs legitimately never edit, so every step counts toward their budget
+  const readOnly = !o.auto;
+  const stallSteps = readOnly ? guard.readSteps : guard.stallSteps;
   let stallNudges = 0;
   let opts: RunOptions = o;
   for (;;) {
@@ -201,11 +227,12 @@ export async function runGuarded(o: RunOptions, guard: GuardConfig, cwd = o.cwd 
     base.compactions += r.compactions;
     const sessionId = r.sessionId ?? opts.sessionId;
     if (!r.stopped || runs.length > guard.maxNudges || !sessionId || o.signal?.aborted) break;
-    const nudge = nudgeFor(r.error, guard);
+    const nudge = nudgeFor(r.error, guard, readOnly);
     if (nudge.stall) stallNudges++;
     opts = { ...o, prompt: nudge.prompt, sessionId, continueLast: false, fork: false, files: undefined, title: undefined };
   }
   const result = { ...merge(runs, startedAt), stallNudges };
+  if (readOnly) result.error = result.error?.replace(/stalled: (\d+) steps without changing any file/, "over budget: $1 steps reading");
   if (o.signal?.aborted && result.stopped) result.error = [result.error, "cancelled"].filter(Boolean).join("; ");
   return result;
 }
@@ -225,10 +252,10 @@ export async function delegate(input: DelegateInput, signal?: AbortSignal, opts:
 
   const before = gitStatus(cwd);
   const head = gitHead(cwd);
-  const guard = opts.guard ?? { loopCompactions: config.loopCompactions, stallSteps: config.stallSteps, maxNudges: config.maxNudges };
+  const guard = opts.guard ?? { loopCompactions: config.loopCompactions, stallSteps: config.stallSteps, readSteps: config.readSteps, maxNudges: config.maxNudges };
   const result = await runGuarded(
     {
-      prompt: withGruntRules(input.prompt),
+      prompt: withRules(input.prompt, auto),
       model,
       cwd,
       agent: input.agent,

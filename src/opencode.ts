@@ -221,6 +221,21 @@ function errorMessage(err: any): string {
   return typeof msg === "string" ? msg + ref : JSON.stringify(err);
 }
 
+/** Stops a session on the background service, which keeps running it after its `opencode run` client is killed. */
+export function interruptSession(sessionId: string, cwd?: string, bin = config.bin): Promise<void> {
+  return new Promise((resolve) => {
+    const child = spawn(bin, ["api", "session.interrupt", "--param", `sessionID=${sessionId}`], { cwd, env: runEnv(cwd), stdio: "ignore" });
+    // never hangs the run on an unreachable service
+    const timer = setTimeout(() => child.kill("SIGKILL"), 10_000);
+    const done = () => {
+      clearTimeout(timer);
+      resolve();
+    };
+    child.on("error", done);
+    child.on("close", done);
+  });
+}
+
 export function runOpencode(o: RunOptions): Promise<RunResult> {
   const started = Date.now();
   const collector = new EventCollector();
@@ -232,10 +247,12 @@ export function runOpencode(o: RunOptions): Promise<RunResult> {
     let timedOut = false;
     let stalled = false;
     let settled = false;
+    let killed = false;
     let stopReason: string | undefined;
 
     const kill = () => {
       if (child.exitCode !== null) return;
+      killed = true;
       child.kill("SIGTERM");
       setTimeout(() => child.exitCode === null && child.kill("SIGKILL"), 3000).unref();
     };
@@ -270,11 +287,12 @@ export function runOpencode(o: RunOptions): Promise<RunResult> {
       stderr = (stderr + chunk).slice(-8000);
     });
 
-    const finish = (exitCode: number | null, spawnError?: string) => {
+    const finish = async (exitCode: number | null, spawnError?: string) => {
       if (settled) return;
       settled = true;
       deadline.stop();
       idle.stop();
+      if (killed && collector.sessionId) await interruptSession(collector.sessionId, o.cwd, bin);
       if (!stopReason) collector.push(buf);
       const errors = [...collector.errors];
       if (spawnError) errors.push(spawnError);

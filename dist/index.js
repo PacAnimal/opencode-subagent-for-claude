@@ -21684,6 +21684,7 @@ var config2 = {
   idleSec: int2(env.OPENCODE_DELEGATE_IDLE_TIMEOUT, 900),
   loopCompactions: int2(env.OPENCODE_DELEGATE_LOOP_COMPACTIONS, 2),
   stallSteps: int2(env.OPENCODE_DELEGATE_STALL_STEPS, 40),
+  readSteps: int2(env.OPENCODE_DELEGATE_READ_STEPS, 30),
   maxNudges: int2(env.OPENCODE_DELEGATE_MAX_NUDGES, 4),
   maxOutputChars: int2(env.OPENCODE_DELEGATE_MAX_OUTPUT, 40000),
   defaultCwd: env.OPENCODE_DELEGATE_CWD || env.CLAUDE_PROJECT_DIR || process.cwd(),
@@ -21844,6 +21845,18 @@ function errorMessage(err) {
   const ref = err?.data?.ref ? ` (ref ${err.data.ref})` : "";
   return typeof msg === "string" ? msg + ref : JSON.stringify(err);
 }
+function interruptSession(sessionId, cwd, bin = config2.bin) {
+  return new Promise((resolve) => {
+    const child = spawn(bin, ["api", "session.interrupt", "--param", `sessionID=${sessionId}`], { cwd, env: runEnv(cwd), stdio: "ignore" });
+    const timer = setTimeout(() => child.kill("SIGKILL"), 1e4);
+    const done = () => {
+      clearTimeout(timer);
+      resolve();
+    };
+    child.on("error", done);
+    child.on("close", done);
+  });
+}
 function runOpencode(o) {
   const started = Date.now();
   const collector = new EventCollector;
@@ -21855,10 +21868,12 @@ function runOpencode(o) {
     let timedOut = false;
     let stalled = false;
     let settled = false;
+    let killed = false;
     let stopReason;
     const kill = () => {
       if (child.exitCode !== null)
         return;
+      killed = true;
       child.kill("SIGTERM");
       setTimeout(() => child.exitCode === null && child.kill("SIGKILL"), 3000).unref();
     };
@@ -21894,12 +21909,14 @@ function runOpencode(o) {
     child.stderr.setEncoding("utf8").on("data", (chunk) => {
       stderr = (stderr + chunk).slice(-8000);
     });
-    const finish = (exitCode, spawnError) => {
+    const finish = async (exitCode, spawnError) => {
       if (settled)
         return;
       settled = true;
       deadline.stop();
       idle.stop();
+      if (killed && collector.sessionId)
+        await interruptSession(collector.sessionId, o.cwd, bin);
       if (!stopReason)
         collector.push(buf);
       const errors = [...collector.errors];
@@ -22067,6 +22084,20 @@ var REPORT_FORMAT = `- End your reply with these two sections, in this order:
 Exactly what you need from your lead and why: a tool to install, a config change, a decision, access. Also list anything your code relies on that isn't already in the project (a package not in the manifest, an env var, a config entry), even if you finished. Write "none" only if there is nothing.
 ## Result
 A short summary: files changed, and anything left undone.`;
+var READ_REPORT_FORMAT = `- End your reply with these two sections, in this order:
+## Needs
+Anything you could not check without help from your lead (a tool, access, a decision), and why. Write "none" only if there is nothing.
+## Result
+Your answer: what you were asked for, e.g. the verdict and each finding with file:line.`;
+var READ_RULES = `---
+Rules for this task (from your lead):
+- You are reading, not implementing. Change nothing: no edits, no commits, no installs, no commands that change files, git or the environment.
+How to work:
+- Be quick. Every step you take is slow and costly, so take few of them.
+- Read each file you need whole, in one read, rather than in slices; most source files are small. Don't re-read what you have already read.
+- Put independent reads and searches in the same step, as parallel tool calls.
+- Answer as soon as you can. Don't keep checking a conclusion you have already reached.
+${READ_REPORT_FORMAT}`;
 var GRUNT_RULES = `---
 Rules for this task (from your lead):
 - You are an implementer. Do only the implementation work described above, within the files it gives you. Nothing more.
@@ -22083,15 +22114,19 @@ How to work:
 ${REPORT_FORMAT}`;
 var NUDGE = `Your context has been compacted {n} times without you changing any file. Stop exploring. Using your summary, make the next change now: open only the file you are about to edit, edit it, then continue with the next one.`;
 var STALL_NUDGE = `You have spent {n} steps without changing any file. You have investigated enough: write the first file of the change now, then continue file by file, keeping each step small. If you are blocked, stop and say why under ## Needs.`;
+var WRAP_UP = `You have spent {n} steps reading. Stop investigating and write your answer now from what you have. Mark anything you could not confirm as unconfirmed rather than reading further.`;
 var nudgePrompt = (n) => `${NUDGE.replace("{n}", String(n))}
 
 ${REPORT_FORMAT}`;
 var stallPrompt = (n) => `${STALL_NUDGE.replace("{n}", String(n))}
 
 ${REPORT_FORMAT}`;
-var withGruntRules = (prompt) => `${prompt}
+var wrapUpPrompt = (n) => `${WRAP_UP.replace("{n}", String(n))}
 
-${GRUNT_RULES}`;
+${READ_REPORT_FORMAT}`;
+var withRules = (prompt, auto) => `${prompt}
+
+${auto ? GRUNT_RULES : READ_RULES}`;
 function extractNeeds(text) {
   const m = text.match(/^## Needs[ \t]*\n([\s\S]*?)(?=^## |(?![\s\S]))/m);
   const needs = m?.[1]?.trim();
@@ -22158,10 +22193,10 @@ function loopGuard(limit, cwd, stallSteps = 0) {
     return idle >= stallSteps ? `stalled: ${idle} steps without changing any file` : undefined;
   };
 }
-function nudgeFor(error, guard) {
+function nudgeFor(error, guard, readOnly) {
   const stalled = error?.match(/stalled: (\d+) steps/);
   if (stalled)
-    return { prompt: stallPrompt(Number(stalled[1])), stall: true };
+    return { prompt: readOnly ? wrapUpPrompt(Number(stalled[1])) : stallPrompt(Number(stalled[1])), stall: true };
   const n = Number(error?.match(/compacted (\d+) times/)?.[1] ?? guard.loopCompactions);
   return { prompt: nudgePrompt(n), stall: false };
 }
@@ -22191,7 +22226,8 @@ async function runGuarded(o, guard, cwd = o.cwd ?? process.cwd()) {
   const startedAt = o.startedAt ?? Date.now();
   const runs = [];
   const base = { steps: 0, toolCalls: 0, edits: 0, compactions: 0 };
-  const stallSteps = o.auto ? guard.stallSteps : 0;
+  const readOnly = !o.auto;
+  const stallSteps = readOnly ? guard.readSteps : guard.stallSteps;
   let stallNudges = 0;
   let opts = o;
   for (;; ) {
@@ -22216,12 +22252,14 @@ async function runGuarded(o, guard, cwd = o.cwd ?? process.cwd()) {
     const sessionId = r.sessionId ?? opts.sessionId;
     if (!r.stopped || runs.length > guard.maxNudges || !sessionId || o.signal?.aborted)
       break;
-    const nudge = nudgeFor(r.error, guard);
+    const nudge = nudgeFor(r.error, guard, readOnly);
     if (nudge.stall)
       stallNudges++;
     opts = { ...o, prompt: nudge.prompt, sessionId, continueLast: false, fork: false, files: undefined, title: undefined };
   }
   const result = { ...merge2(runs, startedAt), stallNudges };
+  if (readOnly)
+    result.error = result.error?.replace(/stalled: (\d+) steps without changing any file/, "over budget: $1 steps reading");
   if (o.signal?.aborted && result.stopped)
     result.error = [result.error, "cancelled"].filter(Boolean).join("; ");
   return result;
@@ -22236,9 +22274,9 @@ async function delegate(input, signal, opts = {}) {
   const files = input.files?.map((f) => isAbsolute(f) ? f : resolve(cwd, f));
   const before = gitStatus(cwd);
   const head = gitHead(cwd);
-  const guard = opts.guard ?? { loopCompactions: config2.loopCompactions, stallSteps: config2.stallSteps, maxNudges: config2.maxNudges };
+  const guard = opts.guard ?? { loopCompactions: config2.loopCompactions, stallSteps: config2.stallSteps, readSteps: config2.readSteps, maxNudges: config2.maxNudges };
   const result = await runGuarded({
-    prompt: withGruntRules(input.prompt),
+    prompt: withRules(input.prompt, auto),
     model,
     cwd,
     agent: input.agent,
@@ -22350,7 +22388,7 @@ async function waitTask(task, waitSec) {
 // package.json
 var package_default = {
   name: "opencode-subagent-for-claude",
-  version: "0.6.1",
+  version: "0.7.0",
   description: "Claude Code plugin + MCP server that lets Claude hand work to opencode models and stay the orchestrator.",
   type: "module",
   license: "MIT",

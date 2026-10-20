@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { extractNeeds, formatOutcome, GRUNT_RULES, nudgePrompt, pickModel, REPORT_FORMAT, withGruntRules, type DelegateOutcome } from "../src/delegate.ts";
+import { extractNeeds, formatOutcome, GRUNT_RULES, nudgePrompt, pickModel, READ_REPORT_FORMAT, READ_RULES, REPORT_FORMAT, withRules, wrapUpPrompt, type DelegateOutcome } from "../src/delegate.ts";
 import type { RunResult } from "../src/opencode.ts";
 
 const cfg = (over: Partial<{ auto: boolean; defaultModel?: string; readModel?: string }>) =>
@@ -74,8 +74,8 @@ describe("formatOutcome", () => {
 });
 
 describe("grunt rules", () => {
-  test("appended to every brief", () => {
-    const p = withGruntRules("add a CSV export");
+  test("appended to every editing brief", () => {
+    const p = withRules("add a CSV export", true);
     expect(p).toStartWith("add a CSV export\n\n");
     expect(p).toEndWith(GRUNT_RULES);
   });
@@ -90,6 +90,26 @@ describe("grunt rules", () => {
     const p = nudgePrompt(2);
     expect(p).toStartWith("Your context has been compacted 2 times without you changing any file.");
     expect(p).toEndWith(REPORT_FORMAT);
+  });
+});
+
+describe("read rules", () => {
+  test("appended to every read-only brief instead of the grunt rules", () => {
+    const p = withRules("review the diff", false);
+    expect(p).toStartWith("review the diff\n\n");
+    expect(p).toEndWith(READ_RULES);
+    expect(p).not.toContain(GRUNT_RULES);
+  });
+  test("read whole files once, in parallel, change nothing, and answer under Result", () => {
+    for (const s of ["Change nothing", "whole", "parallel", "re-read", "## Needs", "## Result"]) expect(READ_RULES).toContain(s);
+    expect(READ_RULES).not.toContain("implementer");
+    expect(READ_RULES).not.toContain("Work in increments");
+    expect(READ_RULES).toEndWith(READ_REPORT_FORMAT);
+  });
+  test("wrap-up prompt carries the count and the read report format", () => {
+    const p = wrapUpPrompt(30);
+    expect(p).toStartWith("You have spent 30 steps reading.");
+    expect(p).toEndWith(READ_REPORT_FORMAT);
   });
 });
 

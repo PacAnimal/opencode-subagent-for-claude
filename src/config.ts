@@ -53,6 +53,8 @@ export const config = {
   loopCompactions: int(env.OPENCODE_DELEGATE_LOOP_COMPACTIONS, 2),
   // steps without a file change before an auto run counts as stalled; 0 disables the trigger
   stallSteps: int(env.OPENCODE_DELEGATE_STALL_STEPS, 40),
+  // steps a read-only run takes before it is told to answer now; 0 disables the trigger
+  readSteps: int(env.OPENCODE_DELEGATE_READ_STEPS, 30),
   // resumes with a nudge per delegate call before a looping or stalled run is given up
   maxNudges: int(env.OPENCODE_DELEGATE_MAX_NUDGES, 4),
   maxOutputChars: int(env.OPENCODE_DELEGATE_MAX_OUTPUT, 40000),

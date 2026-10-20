@@ -3,7 +3,7 @@ import { mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { loopGuard, nudgePrompt, runGuarded, stallPrompt } from "../src/delegate.ts";
+import { loopGuard, nudgePrompt, runGuarded, stallPrompt, wrapUpPrompt } from "../src/delegate.ts";
 import type { EventCollector, Progress } from "../src/opencode.ts";
 
 const bin = fileURLToPath(new URL("./fixtures/fake-opencode", import.meta.url));
@@ -23,12 +23,15 @@ afterEach(() => {
   rmSync(dir, { recursive: true, force: true });
 });
 
-const calls = () => readFileSync(log, "utf8").split("\n").filter(Boolean);
-const run = (mode: string, loopCompactions = 2, maxNudges = 2, extra = {}, stallSteps = 0) => {
+const lines = () => readFileSync(log, "utf8").split("\n").filter(Boolean);
+// runs only; interrupts sent to the service are logged as `ARGS api …`
+const calls = () => lines().filter((l) => !l.startsWith("ARGS api "));
+const run = (mode: string, loopCompactions = 2, maxNudges = 2, extra = {}, stallSteps = 0, readSteps = 0) => {
   process.env.FAKE_MODE = mode;
-  return runGuarded({ prompt: "refactor everything", bin, cwd: dir, idleMs: 60_000, ...extra }, { loopCompactions, stallSteps, maxNudges });
+  return runGuarded({ prompt: "refactor everything", bin, cwd: dir, idleMs: 60_000, ...extra }, { loopCompactions, stallSteps, readSteps, maxNudges });
 };
 const stall = (mode: string, stallSteps = 5, maxNudges = 2, auto = true) => run(mode, 2, maxNudges, { auto }, stallSteps);
+const read = (mode: string, readSteps = 5, maxNudges = 2) => run(mode, 2, maxNudges, { auto: false }, 5, readSteps);
 
 describe("loop guard", () => {
   test("a looping run is resumed with a nudge and recovers", async () => {
@@ -47,6 +50,13 @@ describe("loop guard", () => {
     expect(first).not.toContain("--session");
     expect(second).toContain("--session ses_fake");
     expect(second).toEndWith(`-- ${nudgePrompt(2).replaceAll("\n", " ")}`);
+  });
+  test("a stopped run is interrupted on the service before it is resumed", async () => {
+    await run("recover");
+    const [first, interrupt, second] = lines();
+    expect(first).not.toContain("--session");
+    expect(interrupt).toBe("ARGS api session.interrupt --param sessionID=ses_fake");
+    expect(second).toContain("--session ses_fake");
   });
   test("gives up after maxNudges, keeping the session", async () => {
     const r = await run("loop", 2, 2);
@@ -127,7 +137,7 @@ describe("stall guard", () => {
     expect(calls().length).toBe(1);
   });
   test("read-only runs are never stall-nudged", async () => {
-    const r = await stall("stall", 5, 2, false);
+    const r = await read("stall", 0);
     expect(r.ok).toBe(true);
     expect(r.steps).toBe(12);
     expect(r.nudges).toBe(0);
@@ -150,6 +160,31 @@ describe("stall guard", () => {
     expect(r.nudges).toBe(1);
     expect(r.stallNudges).toBe(1);
     expect(calls().length).toBe(2);
+  });
+});
+
+describe("read budget", () => {
+  test("a read-only run over budget is told to answer now, and does", async () => {
+    const r = await read("stall-recover");
+    expect(r.ok).toBe(true);
+    expect(r.text).toBe("fixed");
+    expect(r.nudges).toBe(1);
+    expect(r.steps).toBe(5 + 1);
+    const [, second] = calls();
+    expect(second).toContain("--session ses_fake");
+    expect(second).toEndWith(`-- ${wrapUpPrompt(5).replaceAll("\n", " ")}`);
+  });
+  test("gives up after maxNudges with the over budget error", async () => {
+    const r = await read("stall");
+    expect(r.ok).toBe(false);
+    expect(r.error).toBe("over budget: 5 steps reading");
+    expect(r.nudges).toBe(2);
+    expect(calls().length).toBe(3);
+  });
+  test("auto runs ignore the read budget", async () => {
+    const r = await run("stall", 2, 2, { auto: true }, 0, 5);
+    expect(r.ok).toBe(true);
+    expect(r.nudges).toBe(0);
   });
 });
 

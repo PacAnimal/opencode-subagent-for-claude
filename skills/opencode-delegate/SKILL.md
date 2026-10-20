@@ -79,7 +79,7 @@ Use `files` to attach key files. Keep `cwd` at the project root (or the task's w
 
 ## Permissions
 
-`auto` defaults to true, so the model edits files without asking. Rules opencode's config denies are still enforced. Use `auto: false` for read-only research.
+`auto` defaults to true, so the model edits files without asking. Rules opencode's config denies are still enforced. Use `auto: false` for read-only work: reviews, questions, research. Those runs get reader rules instead of the grunt rules (change nothing, read whole files in parallel, answer fast) and a step budget, after which they're told to answer with what they have. Attach a diff with `files` rather than making the reviewer rebuild it. `task_cancel` also stops the session on opencode's background service.
 
 ## Reporting
 
