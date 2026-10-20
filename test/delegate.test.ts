@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { formatOutcome, pickModel, type DelegateOutcome } from "../src/delegate.ts";
+import { extractNeeds, formatOutcome, GRUNT_RULES, pickModel, withGruntRules, type DelegateOutcome } from "../src/delegate.ts";
 import type { RunResult } from "../src/opencode.ts";
 
 const cfg = (over: Partial<{ auto: boolean; defaultModel?: string; readModel?: string }>) =>
@@ -63,4 +63,40 @@ describe("formatOutcome", () => {
     const s = formatOutcome({ cwd: "/w", result: result({ text: "x".repeat(50) }) }, 20);
     expect(s).toContain("[truncated 30 chars");
   });
+});
+
+describe("grunt rules", () => {
+  test("appended to every brief", () => {
+    const p = withGruntRules("add a CSV export");
+    expect(p).toStartWith("add a CSV export\n\n");
+    expect(p).toEndWith(GRUNT_RULES);
+  });
+  test("forbid verification, installs, config and git, and ask for Needs", () => {
+    for (const s of ["Never commit", "tests", "linters", "install", "dependencies", "config", "git", "## Needs", "## Result"]) expect(GRUNT_RULES).toContain(s);
+  });
+});
+
+describe("extractNeeds", () => {
+  test("pulls the Needs section up to the next heading", () => {
+    expect(extractNeeds("did a thing\n\n## Needs\n- install jq\n- an API key\n\n## Result\nhalf done")).toBe("- install jq\n- an API key");
+  });
+  test("Needs at the end", () => {
+    expect(extractNeeds("## Result\nnothing\n## Needs\nwrite access to config/")).toBe("write access to config/");
+  });
+  test("absent or empty means nothing", () => {
+    expect(extractNeeds("## Result\nall done")).toBeUndefined();
+    expect(extractNeeds("## Needs\n\n## Result\nok")).toBeUndefined();
+    expect(extractNeeds("## Needs\nnone")).toBeUndefined();
+  });
+  test("needs show at the top of the formatted outcome", () => {
+    const s = formatOutcome({ cwd: "/w", result: result({ text: "## Needs\n- install jq\n## Result\nblocked" }) });
+    expect(s).toContain("NEEDS (handle these yourself or ask the user, then continue the session):\n- install jq");
+    expect(s.indexOf("NEEDS")).toBeLessThan(s.indexOf("--- response ---"));
+  });
+});
+
+test("commits made by opencode are flagged", () => {
+  const s = formatOutcome({ cwd: "/w", result: result(), newCommits: ["abc1234 sneaky commit"] });
+  expect(s).toContain("RULE BROKEN: opencode committed (undo or keep it yourself):\n  abc1234 sneaky commit");
+  expect(formatOutcome({ cwd: "/w", result: result(), newCommits: [] })).not.toContain("RULE BROKEN");
 });

@@ -2,7 +2,15 @@
 
 A Claude Code plugin that lets Claude hand work to any model in your [opencode](https://opencode.ai) install.
 
-It's opt-in. Claude leaves opencode alone until you ask for it ("use opencode for this"). From then on it has to route every piece of work it can through opencode, and only orchestrates: it writes the brief, starts the run, reviews the diff and runs the tests.
+It's opt-in. Claude leaves opencode alone until you ask for it ("use opencode for this"). From then on, opencode is Claude's team of junior devs. Claude splits the work into scoped implementation tasks and runs many of them in parallel. opencode only implements; it never runs tests, linters or builds. Claude does all verification itself (tests, lint, build, diff review) and sends every failure back as more implementation work, until the checks pass.
+
+Every brief gets a fixed rules block appended by the server:
+- implement only, in scope
+- never commit
+- no tests, lint or builds
+- no installs, config or other git changes
+
+A grunt that needs something (a tool, a dependency, a config change, a decision) stops and lists it under `## Needs`. The server lifts that to the top of the result, and Claude handles it or asks you. The server also flags any commit a grunt made anyway as `RULE BROKEN`.
 
 ```
 Claude Code ──MCP (stdio)──▶ opencode-delegate server (Bun) ──spawns──▶ opencode run --format json [--auto] …
@@ -13,9 +21,9 @@ It shells out to the `opencode` CLI, so your existing opencode auth, providers, 
 ## What you get
 
 - **MCP tools**: `delegate`, `delegate_async`, `task_result`, `task_list`, `task_cancel`, `list_models`, `list_sessions`
-- **Opt-in rule**: the server's MCP instructions tell Claude never to use it unasked, and to use it for everything it can once asked
-- **`opencode-delegate` skill**: the opt-in rule, and how to delegate, how to brief, how to review
-- **`opencode-worker` subagent**: delegate, verify, iterate, report, for workflows and fan-out
+- **Opt-in rule**: the server's MCP instructions tell Claude never to use it unasked, and once asked, to delegate all implementation while doing the verification itself
+- **`opencode-delegate` skill**: the opt-in rule, the split between implementing and verifying, and the delegate-verify-send-back loop, how to brief, how to review
+- **`opencode-worker` subagent**: leads one task through that loop, for workflows and fan-out
 - **`/opencode` command**: `/opencode write tests for src/date.ts`, or `/opencode kimi k3 -- …` to pick a model
 
 ## Requirements

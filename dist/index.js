@@ -21977,6 +21977,37 @@ async function resolveModelOrThrow(query) {
 }
 
 // src/delegate.ts
+var GRUNT_RULES = `---
+Rules for this task (from your lead):
+- You are an implementer. Do only the implementation work described above, within the files it gives you. Nothing more.
+- Never commit. Leave all changes uncommitted for your lead.
+- Do not run tests, linters, formatters, type checks or builds. Your lead verifies.
+- Do not install, upgrade or remove anything: no packages, dependencies, tools or SDKs.
+- Do not change project or tool config (package manifests, lock files, build, CI, lint or editor config, env files) unless the task explicitly assigns that file to you.
+- Do not run any other git command that changes state (push, branch, checkout, stash, reset).
+- If you need any of the above, hit a missing tool or permission, or the task is unclear, don't work around it. Do what you can without it, then stop.
+- End your reply with these two sections, in this order:
+## Needs
+Exactly what you need from your lead and why: a tool to install, a config change, a decision, access. Also list anything your code relies on that isn't already in the project (a package not in the manifest, an env var, a config entry), even if you finished. Write "none" only if there is nothing.
+## Result
+A short summary: files changed, and anything left undone.`;
+var withGruntRules = (prompt) => `${prompt}
+
+${GRUNT_RULES}`;
+function extractNeeds(text) {
+  const m = text.match(/^## Needs[ \t]*\n([\s\S]*?)(?=^## |(?![\s\S]))/m);
+  const needs = m?.[1]?.trim();
+  return needs && !/^none\.?$/i.test(needs) ? needs : undefined;
+}
+function gitHead(cwd) {
+  const r = spawnSync("git", ["rev-parse", "HEAD"], { cwd, encoding: "utf8" });
+  return r.status === 0 ? r.stdout.trim() : undefined;
+}
+function commitsSince(cwd, head) {
+  const r = spawnSync("git", ["log", "--oneline", `${head}..HEAD`], { cwd, encoding: "utf8" });
+  return r.status === 0 ? r.stdout.split(`
+`).filter(Boolean) : [];
+}
 function gitStatus(cwd) {
   const r = spawnSync("git", ["status", "--porcelain", "--untracked-files=all"], { cwd, encoding: "utf8" });
   if (r.status !== 0)
@@ -21998,8 +22029,9 @@ async function delegate(input, signal) {
   const model = query ? await resolveModelOrThrow(query) : undefined;
   const files = input.files?.map((f) => isAbsolute(f) ? f : resolve(cwd, f));
   const before = gitStatus(cwd);
+  const head = gitHead(cwd);
   const result = await runOpencode({
-    prompt: input.prompt,
+    prompt: withGruntRules(input.prompt),
     model,
     cwd,
     agent: input.agent,
@@ -22014,7 +22046,8 @@ async function delegate(input, signal) {
   });
   const after = before && gitStatus(cwd);
   const changedFiles = after ? [...after].filter((l) => !before.has(l)) : undefined;
-  return { model, cwd, result, changedFiles };
+  const newCommits = head ? commitsSince(cwd, head) : undefined;
+  return { model, cwd, result, changedFiles, newCommits };
 }
 function truncate(s, max) {
   if (s.length <= max)
@@ -22035,12 +22068,20 @@ function formatOutcome(o, maxChars = config2.maxOutputChars) {
   ];
   if (r.error)
     lines.push(`error: ${r.error}`);
+  const needs = extractNeeds(r.text);
+  if (needs)
+    lines.push(`NEEDS (handle these yourself or ask the user, then continue the session):
+${needs}`);
   if (r.toolCalls.length) {
     const counts = new Map;
     for (const c of r.toolCalls)
       counts.set(c.tool, (counts.get(c.tool) ?? 0) + 1);
     lines.push(`tools used: ${[...counts].map(([k, v]) => `${k}\xD7${v}`).join(", ")}`);
   }
+  if (o.newCommits?.length)
+    lines.push(`RULE BROKEN: opencode committed (undo or keep it yourself):
+${o.newCommits.map((c) => `  ${c}`).join(`
+`)}`);
   if (o.changedFiles) {
     lines.push(o.changedFiles.length ? `git changes:
 ${o.changedFiles.map((f) => `  ${f}`).join(`
@@ -22092,7 +22133,7 @@ async function waitTask(task, waitSec) {
 // package.json
 var package_default = {
   name: "opencode-subagent-for-claude",
-  version: "0.2.0",
+  version: "0.3.0",
   description: "Claude Code plugin + MCP server that lets Claude hand work to opencode models and stay the orchestrator.",
   type: "module",
   license: "MIT",
@@ -22120,8 +22161,10 @@ var package_default = {
 
 // src/index.ts
 var INSTRUCTIONS = `Opt-in only. Never use these tools unless the user has asked you to use opencode.
-Once they have, it is mandatory: route every piece of work you can through opencode for as long as that instruction stands (implementation, tests, refactors, code reading, research, reviews with auto: false). Only do work yourself that can't be delegated: orchestration, briefing, reviewing results and talking to the user.
-Write a self-contained brief (the model can't see this conversation), then review the git changes and run the tests yourself before reporting.`;
+Once they have, it is mandatory: opencode is your team of junior devs for implementation grunt work. Split the work into scoped tasks and launch many in parallel with delegate_async (separate worktrees or non-overlapping files).
+Grunts do grunt work, nothing more. Rules appended to every brief stop them from verifying, committing, installing anything, or touching config, git or the environment. You run the tests, lint and build yourself, review the diff, then send every failure or review finding back as a new implementation task (same session_id). Repeat until your verification passes.
+When a result has a NEEDS block (a tool, dependency, config change, access or decision), handle it yourself if it's clearly in scope and safe, otherwise ask the user. Never tell the grunt to do it. Then continue its session. RULE BROKEN means it committed anyway: undo the commit or keep it deliberately.
+Write a self-contained brief for each task (it can't see this conversation).`;
 var server = new McpServer({ name: "opencode-delegate", version: package_default.version }, { instructions: INSTRUCTIONS });
 var text = (t, isError = false) => ({ content: [{ type: "text", text: t }], isError });
 var errText = (e) => text(e instanceof Error ? e.message : String(e), true);
@@ -22159,7 +22202,7 @@ server.registerTool("list_models", {
 });
 server.registerTool("delegate", {
   title: "Delegate a task to opencode",
-  description: "Hand a task to an opencode model and wait for it. It works in `cwd` with its own read/edit/shell tools, so it can implement, not just answer. Only use when the user has asked for opencode. Returns its final answer, session_id, token usage and git changes. Review the changes afterwards. Prefer delegate_async for anything longer than a few minutes.",
+  description: "Hand a task to an opencode model and wait for it. It works in `cwd` with its own read/edit/shell tools, so it can implement, not just answer. Only use when the user has asked for opencode. Returns its final answer, session_id, token usage and git changes. It implements only: run the tests, lint and build yourself afterwards. Prefer delegate_async for anything longer than a few minutes.",
   inputSchema: delegateShape
 }, async (input, extra) => {
   const progressToken = extra._meta?.progressToken;

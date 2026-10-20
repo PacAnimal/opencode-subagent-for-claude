@@ -12,8 +12,10 @@ import pkg from "../package.json" with { type: "json" };
 
 // shown to the host model in its system prompt
 const INSTRUCTIONS = `Opt-in only. Never use these tools unless the user has asked you to use opencode.
-Once they have, it is mandatory: route every piece of work you can through opencode for as long as that instruction stands (implementation, tests, refactors, code reading, research, reviews with auto: false). Only do work yourself that can't be delegated: orchestration, briefing, reviewing results and talking to the user.
-Write a self-contained brief (the model can't see this conversation), then review the git changes and run the tests yourself before reporting.`;
+Once they have, it is mandatory: opencode is your team of junior devs for implementation grunt work. Split the work into scoped tasks and launch many in parallel with delegate_async (separate worktrees or non-overlapping files).
+Grunts do grunt work, nothing more. Rules appended to every brief stop them from verifying, committing, installing anything, or touching config, git or the environment. You run the tests, lint and build yourself, review the diff, then send every failure or review finding back as a new implementation task (same session_id). Repeat until your verification passes.
+When a result has a NEEDS block (a tool, dependency, config change, access or decision), handle it yourself if it's clearly in scope and safe, otherwise ask the user. Never tell the grunt to do it. Then continue its session. RULE BROKEN means it committed anyway: undo the commit or keep it deliberately.
+Write a self-contained brief for each task (it can't see this conversation).`;
 
 const server = new McpServer({ name: "opencode-delegate", version: pkg.version }, { instructions: INSTRUCTIONS });
 
@@ -74,7 +76,7 @@ server.registerTool(
   {
     title: "Delegate a task to opencode",
     description:
-      "Hand a task to an opencode model and wait for it. It works in `cwd` with its own read/edit/shell tools, so it can implement, not just answer. Only use when the user has asked for opencode. Returns its final answer, session_id, token usage and git changes. Review the changes afterwards. Prefer delegate_async for anything longer than a few minutes.",
+      "Hand a task to an opencode model and wait for it. It works in `cwd` with its own read/edit/shell tools, so it can implement, not just answer. Only use when the user has asked for opencode. Returns its final answer, session_id, token usage and git changes. It implements only: run the tests, lint and build yourself afterwards. Prefer delegate_async for anything longer than a few minutes.",
     inputSchema: delegateShape,
   },
   async (input, extra) => {

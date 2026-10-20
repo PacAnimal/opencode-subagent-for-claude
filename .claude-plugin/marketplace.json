@@ -6,8 +6,8 @@
     {
       "name": "opencode-subagent",
       "source": "./",
-      "description": "Delegate work to opencode models on request while Claude plans, briefs and reviews.",
-      "version": "0.2.0",
+      "description": "On request, opencode models do the implementation while Claude splits the work and verifies it.",
+      "version": "0.3.0",
       "category": "development"
     }
   ]
