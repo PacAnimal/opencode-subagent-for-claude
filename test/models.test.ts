@@ -91,18 +91,18 @@ describe("same model from several providers", () => {
 });
 
 describe("dash-separated versions", () => {
-  const ids = ["acme/claude-haiku-4-5-20251001", "acme/eu.anthropic.claude-haiku-5-5", "acme/eu.anthropic.claude-opus-5-5", "acme/claude-opus-4-8"];
+  const ids = ["acme/claude-haiku-4-5-20251001", "acme/claude-haiku-5-5", "acme/claude-opus-5-5", "acme/claude-opus-4-8"];
   const p = (q: string) => {
     const r = resolveModel(q, ids, []);
     return r.ok ? r.model : `ERR:${r.reason}`;
   };
   test("dotted query matches dashed id", () => {
-    expect(p("haiku 5.5")).toBe("acme/eu.anthropic.claude-haiku-5-5");
-    expect(p("opus 5.5")).toBe("acme/eu.anthropic.claude-opus-5-5");
+    expect(p("haiku 5.5")).toBe("acme/claude-haiku-5-5");
+    expect(p("opus 5.5")).toBe("acme/claude-opus-5-5");
     expect(p("opus 4.8")).toBe("acme/claude-opus-4-8");
     expect(p("haiku 4.5")).toBe("acme/claude-haiku-4-5-20251001");
   });
   test("variant still applies", () => {
-    expect(p("opus 5.5#high")).toBe("acme/eu.anthropic.claude-opus-5-5#high");
+    expect(p("opus 5.5#high")).toBe("acme/claude-opus-5-5#high");
   });
 });
