@@ -6,7 +6,7 @@ import { z } from "zod";
 import { config } from "./config.ts";
 import { delegate, formatOutcome } from "./delegate.ts";
 import { listModels } from "./models.ts";
-import { execText } from "./opencode.ts";
+import { execText, formatProgress, type Progress } from "./opencode.ts";
 import { getTask, listTasks, startTask, waitTask, type Task } from "./tasks.ts";
 import pkg from "../package.json" with { type: "json" };
 
@@ -21,6 +21,26 @@ const server = new McpServer({ name: "opencode-delegate", version: pkg.version }
 
 const text = (t: string, isError = false) => ({ content: [{ type: "text" as const, text: t }], isError });
 const errText = (e: unknown) => text(e instanceof Error ? e.message : String(e), true);
+
+type Extra = { _meta?: { progressToken?: string | number }; sendNotification: (n: any) => Promise<void> };
+
+/** Sends a progress notification every 15s while `work` runs; a keep-alive for clients that reset their timeout on progress. */
+async function withHeartbeat<T>(extra: Extra, message: (secs: number) => string, work: () => Promise<T>): Promise<T> {
+  const progressToken = extra._meta?.progressToken;
+  let tick = 0;
+  const heartbeat =
+    progressToken !== undefined
+      ? setInterval(() => {
+          tick++;
+          extra.sendNotification({ method: "notifications/progress", params: { progressToken, progress: tick, message: message(tick * 15) } }).catch(() => {});
+        }, 15000)
+      : undefined;
+  try {
+    return await work();
+  } finally {
+    if (heartbeat) clearInterval(heartbeat);
+  }
+}
 
 const delegateShape = {
   prompt: z
@@ -87,24 +107,13 @@ server.registerTool(
     inputSchema: delegateShape,
   },
   async (input, extra) => {
-    const progressToken = extra._meta?.progressToken;
-    let tick = 0;
-    // keep-alive for clients that reset their timeout on progress
-    const heartbeat = progressToken
-      ? setInterval(() => {
-          tick++;
-          extra
-            .sendNotification({ method: "notifications/progress", params: { progressToken, progress: tick, message: `opencode running (${tick * 15}s)` } })
-            .catch(() => {});
-        }, 15000)
-      : undefined;
+    let progress: Progress | undefined;
+    const message = (s: number) => `opencode running (${s}s)${progress ? `  ${formatProgress(progress)}` : ""}`;
     try {
-      const outcome = await delegate(input, extra.signal);
+      const outcome = await withHeartbeat(extra, message, () => delegate(input, extra.signal, { onProgress: (p) => (progress = p) }));
       return text(formatOutcome(outcome), !outcome.result.ok);
     } catch (e) {
       return errText(e);
-    } finally {
-      if (heartbeat) clearInterval(heartbeat);
     }
   },
 );
@@ -112,7 +121,8 @@ server.registerTool(
 function taskSummary(t: Task): string {
   const secs = (((t.finishedAt ?? Date.now()) - t.startedAt) / 1000).toFixed(0);
   const model = t.outcome?.model ?? t.input.model ?? "(default)";
-  return `${t.id}  ${t.status.padEnd(9)} ${secs}s  ${model}  ${t.input.title ?? t.input.prompt.slice(0, 60).replace(/\s+/g, " ")}`;
+  const progress = t.status === "running" && t.progress ? `  ${formatProgress(t.progress)}` : "";
+  return `${t.id}  ${t.status.padEnd(9)} ${secs}s${progress}  ${model}  ${t.input.title ?? t.input.prompt.slice(0, 60).replace(/\s+/g, " ")}`;
 }
 
 server.registerTool(
@@ -133,17 +143,24 @@ server.registerTool(
   "task_result",
   {
     title: "Get a background opencode task's result",
-    description: "Return the status/result of a delegate_async task, optionally waiting up to wait_s seconds for it to finish.",
+    description:
+      "Return the status/result of a delegate_async task, optionally waiting up to wait_s seconds for it to finish. While running it shows live progress: steps, tool calls, file edits, context compactions, context size and time since the last activity.",
     inputSchema: {
       task_id: z.string(),
-      wait_s: z.number().int().min(0).max(3600).optional().describe("Seconds to wait for completion before returning (default 0)."),
+      wait_s: z
+        .number()
+        .int()
+        .min(0)
+        .max(3600)
+        .optional()
+        .describe("Seconds to wait for completion before returning (default 0). Progress notifications are sent every 15s while waiting."),
     },
     annotations: { readOnlyHint: true },
   },
-  async ({ task_id, wait_s }) => {
+  async ({ task_id, wait_s }, extra) => {
     const t = getTask(task_id);
     if (!t) return text(`unknown task_id '${task_id}'`, true);
-    await waitTask(t, wait_s ?? 0);
+    await withHeartbeat(extra, () => taskSummary(t), () => waitTask(t, wait_s ?? 0));
     if (t.status === "running") return text(`${taskSummary(t)}\nstill running, call again later or with a larger wait_s.`);
     if (t.outcome) return text(`task: ${t.id} (${t.status})\n${formatOutcome(t.outcome)}`, t.status !== "done");
     return text(`task: ${t.id} (${t.status})\nerror: ${t.error}`, true);

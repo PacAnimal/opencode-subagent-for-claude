@@ -1,5 +1,43 @@
 #!/bin/sh
-# stands in for `opencode run`; FAKE_MODE=hang goes silent after the first event
+# stands in for `opencode run`; FAKE_MODE picks the scenario, FAKE_LOG records each invocation's args
+#   hang: goes silent after the first event
+#   loop: context keeps collapsing with only non-edit tools
+#   recover: like loop, but edits and finishes when resumed with --session
+#   edits: compacts, but edits between compactions
+# one line per invocation, newlines in the prompt become spaces
+[ -n "$FAKE_LOG" ] && printf 'ARGS %s\n' "$(printf '%s' "$*" | tr '\n' ' ')" >> "$FAKE_LOG"
+resumed=
+for a in "$@"; do
+  [ "$a" = "--" ] && break
+  [ "$a" = "--session" ] && resumed=1
+done
+step() { echo "{\"type\":\"step_finish\",\"part\":{\"tokens\":{\"input\":$1,\"output\":10,\"reasoning\":0,\"cache\":{\"read\":0,\"write\":0}}}}"; }
+tool() { echo "{\"type\":\"tool_use\",\"part\":{\"tool\":\"$1\",\"state\":{\"status\":\"completed\",\"input\":{}}}}"; }
+
 echo '{"type":"step_start","sessionID":"ses_fake"}'
-if [ "$FAKE_MODE" = "hang" ]; then exec sleep 30; fi
+case "$FAKE_MODE" in
+  hang) exec sleep 30 ;;
+  loop | recover)
+    if [ "$FAKE_MODE" = "recover" ] && [ -n "$resumed" ]; then
+      tool edit
+      step 30000
+      echo '{"type":"text","part":{"text":"fixed"}}'
+      exit 0
+    fi
+    for i in 1 2 3; do
+      tool read
+      step 100000
+      tool shell
+      step 20000
+    done
+    ;;
+  edits)
+    for i in 1 2 3; do
+      tool read
+      step 100000
+      tool edit
+      step 20000
+    done
+    ;;
+esac
 echo '{"type":"text","part":{"text":"done"}}'

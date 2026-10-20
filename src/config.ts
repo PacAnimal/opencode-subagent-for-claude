@@ -49,6 +49,10 @@ export const config = {
   // hard cap off by default; a run is only killed once it stops producing output
   timeoutSec: int(env.OPENCODE_DELEGATE_TIMEOUT, 0),
   idleSec: int(env.OPENCODE_DELEGATE_IDLE_TIMEOUT, 600),
+  // compactions without a file change before a run counts as looping; 0 disables the guard
+  loopCompactions: int(env.OPENCODE_DELEGATE_LOOP_COMPACTIONS, 2),
+  // resumes with a nudge per delegate call before a looping run is given up
+  maxNudges: int(env.OPENCODE_DELEGATE_MAX_NUDGES, 2),
   maxOutputChars: int(env.OPENCODE_DELEGATE_MAX_OUTPUT, 40000),
   defaultCwd: env.OPENCODE_DELEGATE_CWD || env.CLAUDE_PROJECT_DIR || process.cwd(),
   // highest priority first

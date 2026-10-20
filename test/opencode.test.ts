@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
-import { buildArgs, EventCollector, runEnv } from "../src/opencode.ts";
+import { buildArgs, COMPACTION_MIN_CONTEXT, EventCollector, formatProgress, runEnv } from "../src/opencode.ts";
 
 const collect = (fixture: string) => {
   const c = new EventCollector();
@@ -56,6 +56,51 @@ describe("EventCollector", () => {
     const c = new EventCollector();
     c.push("plain output");
     expect(c.text).toBe("plain output");
+  });
+});
+
+const step = (input: number, read = 0, write = 0) => JSON.stringify({ type: "step_finish", part: { tokens: { input, output: 1, reasoning: 0, cache: { read, write } } } });
+const tool = (name: string) => JSON.stringify({ type: "tool_use", part: { tool: name, state: { status: "completed", input: {} } } });
+const feed = (lines: string[]) => {
+  const c = new EventCollector();
+  for (const l of lines) c.push(l);
+  return c;
+};
+
+describe("live progress", () => {
+  test("context size is input plus cache of the last step", () => {
+    const c = feed([step(100, 2000, 30), step(50, 4000, 10)]);
+    expect(c.contextTokens).toBe(4060);
+    expect(c.compactions).toBe(0);
+  });
+  test("a context collapsing below half counts as a compaction", () => {
+    const c = feed([step(1000, 150_054), step(479, 20_000), step(1000, 90_000), step(1000, 160_000), step(500, 40_000)]);
+    expect(c.compactions).toBe(2);
+    expect(c.contextTokens).toBe(40_500);
+  });
+  test("small contexts never count", () => {
+    const c = feed([step(COMPACTION_MIN_CONTEXT - 1), step(10), step(40_000), step(100)]);
+    expect(c.compactions).toBe(0);
+  });
+  test("gradual growth and mild drops don't count", () => {
+    const c = feed([step(60_000), step(80_000), step(120_000), step(70_000), step(150_000)]);
+    expect(c.compactions).toBe(0);
+  });
+  test("edit-class tools are counted", () => {
+    const c = feed(["write", "edit", "multiedit", "patch", "apply_patch", "read", "shell", "grep"].map(tool));
+    expect(c.edits).toBe(5);
+    expect(c.toolCalls.length).toBe(8);
+  });
+  test("fixture edits and last event time", () => {
+    const c = collect("tools.jsonl");
+    expect(c.edits).toBe(1);
+    expect(c.lastEventAt).toBeNumber();
+    expect(c.progress).toMatchObject({ steps: 2, toolCalls: 2, edits: 1, compactions: 0 });
+  });
+  test("progress line", () => {
+    const p = { steps: 94, toolCalls: 100, edits: 0, compactions: 2, contextTokens: 20_479, lastEventAt: 1_000 };
+    expect(formatProgress(p, 13_000)).toBe("steps 94  tools 100  edits 0  compactions 2  ctx 20k  last activity 12s ago");
+    expect(formatProgress({ ...p, nudges: 1, lastEventAt: undefined })).toBe("steps 94  tools 100  edits 0  compactions 2  ctx 20k  nudges 1");
   });
 });
 

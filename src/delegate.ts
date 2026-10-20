@@ -3,7 +3,7 @@ import { existsSync } from "node:fs";
 import { isAbsolute, resolve } from "node:path";
 import { config } from "./config.ts";
 import { resolveModelOrThrow } from "./models.ts";
-import { runOpencode, type RunResult } from "./opencode.ts";
+import { runOpencode, type EventCollector, type Progress, type RunOptions, type RunResult } from "./opencode.ts";
 
 export interface DelegateInput {
   prompt: string;
@@ -27,6 +27,13 @@ export interface DelegateOutcome {
   newCommits?: string[];
 }
 
+// the report format every run ends with
+export const REPORT_FORMAT = `- End your reply with these two sections, in this order:
+## Needs
+Exactly what you need from your lead and why: a tool to install, a config change, a decision, access. Also list anything your code relies on that isn't already in the project (a package not in the manifest, an env var, a config entry), even if you finished. Write "none" only if there is nothing.
+## Result
+A short summary: files changed, and anything left undone.`;
+
 // appended to every brief; the lead (Claude) verifies and handles anything environmental
 export const GRUNT_RULES = `---
 Rules for this task (from your lead):
@@ -37,11 +44,16 @@ Rules for this task (from your lead):
 - Do not change project or tool config (package manifests, lock files, build, CI, lint or editor config, env files) unless the task explicitly assigns that file to you.
 - Do not run any other git command that changes state (push, branch, checkout, stash, reset).
 - If you need any of the above, hit a missing tool or permission, or the task is unclear, don't work around it. Do what you can without it, then stop.
-- End your reply with these two sections, in this order:
-## Needs
-Exactly what you need from your lead and why: a tool to install, a config change, a decision, access. Also list anything your code relies on that isn't already in the project (a package not in the manifest, an env var, a config entry), even if you finished. Write "none" only if there is nothing.
-## Result
-A short summary: files changed, and anything left undone.`;
+How to work:
+- Work in increments: read only what you need for the next change, make it, then move on. Don't survey everything first.
+- Your context is limited and gets compacted when it fills. After a compaction, continue from your summary's next step and re-read only the file you are about to edit.
+- Change files with the edit/write tools, not shell redirection.
+${REPORT_FORMAT}`;
+
+// sent when the loop guard resumes a session that keeps compacting without changing anything
+export const NUDGE = `Your context has been compacted {n} times without you changing any file. Stop exploring. Using your summary, make the next change now: open only the file you are about to edit, edit it, then continue with the next one.`;
+
+export const nudgePrompt = (n: number) => `${NUDGE.replace("{n}", String(n))}\n\n${REPORT_FORMAT}`;
 
 export const withGruntRules = (prompt: string) => `${prompt}\n\n${GRUNT_RULES}`;
 
@@ -61,7 +73,7 @@ function commitsSince(cwd: string, head: string): string[] {
   return r.status === 0 ? r.stdout.split("\n").filter(Boolean) : [];
 }
 
-function gitStatus(cwd: string): Set<string> | undefined {
+export function gitStatus(cwd: string): Set<string> | undefined {
   const r = spawnSync("git", ["status", "--porcelain", "--untracked-files=all"], { cwd, encoding: "utf8" });
   if (r.status !== 0) return undefined;
   return new Set(r.stdout.split("\n").filter(Boolean));
@@ -72,7 +84,96 @@ export function pickModel(input: Pick<DelegateInput, "model" | "auto">, cfg = co
   return (input.auto ?? cfg.auto) ? cfg.defaultModel : cfg.readModel;
 }
 
-export async function delegate(input: DelegateInput, signal?: AbortSignal): Promise<DelegateOutcome> {
+export interface GuardConfig {
+  // compactions without progress that count as looping; 0 disables the guard
+  loopCompactions: number;
+  maxNudges: number;
+}
+
+const statusKey = (cwd: string) => [...(gitStatus(cwd) ?? [])].sort().join("\n");
+
+/** checkStep for runOpencode: stops a run once it compacts `limit` times without editing or changing git status. */
+export function loopGuard(limit: number, cwd: string): (c: EventCollector) => string | undefined {
+  let since = 0;
+  let seenEdits = 0;
+  let seenCompactions = 0;
+  let status = limit ? statusKey(cwd) : "";
+  return (c) => {
+    if (!limit) return;
+    if (c.edits > seenEdits) since = 0;
+    seenEdits = c.edits;
+    if (c.compactions === seenCompactions) return;
+    seenCompactions = c.compactions;
+    const now = statusKey(cwd);
+    if (now !== status) since = 0;
+    status = now;
+    since++;
+    return since >= limit ? `looping: compacted ${since} times without changing any file` : undefined;
+  };
+}
+
+function merge(runs: RunResult[], startedAt: number): RunResult {
+  const last = runs[runs.length - 1]!;
+  const sum = (f: (r: RunResult) => number) => runs.reduce((n, r) => n + f(r), 0);
+  return {
+    ...last,
+    sessionId: last.sessionId ?? runs.find((r) => r.sessionId)?.sessionId,
+    toolCalls: runs.flatMap((r) => r.toolCalls),
+    tokens: {
+      input: sum((r) => r.tokens.input),
+      output: sum((r) => r.tokens.output),
+      reasoning: sum((r) => r.tokens.reasoning),
+      cacheRead: sum((r) => r.tokens.cacheRead),
+      cacheWrite: sum((r) => r.tokens.cacheWrite),
+    },
+    cost: sum((r) => r.cost),
+    steps: sum((r) => r.steps),
+    edits: sum((r) => r.edits),
+    compactions: sum((r) => r.compactions),
+    nudges: runs.length - 1,
+    durationMs: Date.now() - startedAt,
+  };
+}
+
+/** Runs opencode, resuming the same session with a nudge when the loop guard stops it. */
+export async function runGuarded(o: RunOptions, guard: GuardConfig, cwd = o.cwd ?? process.cwd()): Promise<RunResult> {
+  const startedAt = o.startedAt ?? Date.now();
+  const runs: RunResult[] = [];
+  const base = { steps: 0, toolCalls: 0, edits: 0, compactions: 0 };
+  let opts: RunOptions = o;
+  for (;;) {
+    const nudges = runs.length;
+    const onProgress = (p: Progress) =>
+      o.onProgress?.({
+        ...p,
+        steps: base.steps + p.steps,
+        toolCalls: base.toolCalls + p.toolCalls,
+        edits: base.edits + p.edits,
+        compactions: base.compactions + p.compactions,
+        nudges,
+      });
+    const r = await runOpencode({ ...opts, startedAt, onProgress, checkStep: loopGuard(guard.loopCompactions, cwd) });
+    runs.push(r);
+    base.steps += r.steps;
+    base.toolCalls += r.toolCalls.length;
+    base.edits += r.edits;
+    base.compactions += r.compactions;
+    const sessionId = r.sessionId ?? opts.sessionId;
+    if (!r.stopped || runs.length > guard.maxNudges || !sessionId || o.signal?.aborted) break;
+    const n = Number(r.error?.match(/compacted (\d+) times/)?.[1] ?? guard.loopCompactions);
+    opts = { ...o, prompt: nudgePrompt(n), sessionId, continueLast: false, fork: false, files: undefined, title: undefined };
+  }
+  const result = merge(runs, startedAt);
+  if (o.signal?.aborted && result.stopped) result.error = [result.error, "cancelled"].filter(Boolean).join("; ");
+  return result;
+}
+
+export interface DelegateOptions {
+  onProgress?: (p: Progress) => void;
+  guard?: GuardConfig;
+}
+
+export async function delegate(input: DelegateInput, signal?: AbortSignal, opts: DelegateOptions = {}): Promise<DelegateOutcome> {
   const cwd = resolve(config.defaultCwd, input.cwd ?? ".");
   if (!existsSync(cwd)) throw new Error(`cwd does not exist: ${cwd}`);
   const auto = input.auto ?? config.auto;
@@ -82,21 +183,27 @@ export async function delegate(input: DelegateInput, signal?: AbortSignal): Prom
 
   const before = gitStatus(cwd);
   const head = gitHead(cwd);
-  const result = await runOpencode({
-    prompt: withGruntRules(input.prompt),
-    model,
+  const guard = opts.guard ?? { loopCompactions: config.loopCompactions, maxNudges: config.maxNudges };
+  const result = await runGuarded(
+    {
+      prompt: withGruntRules(input.prompt),
+      model,
+      cwd,
+      agent: input.agent,
+      files,
+      sessionId: input.session_id,
+      continueLast: input.continue,
+      fork: input.fork,
+      auto,
+      title: input.title,
+      timeoutMs: (input.timeout_s ?? config.timeoutSec) * 1000,
+      idleMs: config.idleSec * 1000,
+      signal,
+      onProgress: opts.onProgress,
+    },
+    guard,
     cwd,
-    agent: input.agent,
-    files,
-    sessionId: input.session_id,
-    continueLast: input.continue,
-    fork: input.fork,
-    auto,
-    title: input.title,
-    timeoutMs: (input.timeout_s ?? config.timeoutSec) * 1000,
-    idleMs: config.idleSec * 1000,
-    signal,
-  });
+  );
   const after = before && gitStatus(cwd);
   const changedFiles = after ? [...after].filter((l) => !before!.has(l)) : undefined;
   const newCommits = head ? commitsSince(cwd, head) : undefined;
@@ -117,6 +224,7 @@ export function formatOutcome(o: DelegateOutcome, maxChars = config.maxOutputCha
     `session_id: ${r.sessionId ?? "(none)"}`,
     `cwd: ${o.cwd}`,
     `duration: ${(r.durationMs / 1000).toFixed(1)}s, steps: ${r.steps}, tokens in/out: ${t.input + t.cacheRead}/${t.output}${r.cost ? `, cost: $${r.cost.toFixed(4)}` : ""}`,
+    `edits: ${r.edits ?? 0}, compactions: ${r.compactions ?? 0}${r.nudges ? `, nudges: ${r.nudges} (resumed after compacting without changes)` : ""}`,
   ];
   if (r.error) lines.push(`error: ${r.error}`);
   const needs = extractNeeds(r.text);

@@ -13,9 +13,24 @@ export interface RunOptions {
   auto?: boolean;
   title?: string;
   timeoutMs?: number;
+  // when the hard timeout started counting, so it can span several runs (default now)
+  startedAt?: number;
   idleMs?: number;
   signal?: AbortSignal;
   bin?: string;
+  onProgress?: (p: Progress) => void;
+  // called after each step; returning a reason stops the run at that step boundary
+  checkStep?: (c: EventCollector) => string | undefined;
+}
+
+export interface Progress {
+  steps: number;
+  toolCalls: number;
+  edits: number;
+  compactions: number;
+  contextTokens: number;
+  lastEventAt?: number;
+  nudges?: number;
 }
 
 export interface ToolCall {
@@ -40,6 +55,12 @@ export interface RunResult {
   tokens: Tokens;
   cost: number;
   steps: number;
+  edits: number;
+  compactions: number;
+  // resumes forced by the loop guard
+  nudges?: number;
+  // stopped by checkStep
+  stopped?: boolean;
   error?: string;
   exitCode: number | null;
   timedOut: boolean;
@@ -79,6 +100,14 @@ export function watchdog(ms: number | undefined, onFire: () => void) {
   return { kick, stop };
 }
 
+// a step whose context drops below this share of the previous one was compacted
+export const COMPACTION_RATIO = 0.5;
+// smaller contexts are never counted as compacted
+export const COMPACTION_MIN_CONTEXT = 50_000;
+export const EDIT_TOOLS = new Set(["write", "edit", "multiedit", "patch", "apply_patch"]);
+
+export const isCompaction = (prev: number, next: number) => prev >= COMPACTION_MIN_CONTEXT && next < prev * COMPACTION_RATIO;
+
 const secs = (ms: number) => `${Number((ms / 1000).toFixed(1))}s`;
 
 /** Folds `opencode run --format json` event lines into a result. Unknown events are ignored. */
@@ -88,14 +117,21 @@ export class EventCollector {
   tokens: Tokens = { input: 0, output: 0, reasoning: 0, cacheRead: 0, cacheWrite: 0 };
   cost = 0;
   steps = 0;
+  edits = 0;
+  compactions = 0;
+  // context size of the last step
+  contextTokens = 0;
+  lastEventAt?: number;
   errors: string[] = [];
   private allTexts: string[] = [];
   private stepTexts: string[] = [];
   private raw: string[] = [];
 
-  push(line: string) {
+  /** Returns the event type, if the line was an event. */
+  push(line: string): string | undefined {
     const trimmed = line.trim();
     if (!trimmed) return;
+    this.lastEventAt = Date.now();
     let e: any;
     try {
       e = JSON.parse(trimmed);
@@ -117,6 +153,7 @@ export class EventCollector {
         break;
       case "tool_use":
         this.toolCalls.push({ tool: p.tool, status: p.state?.status, title: p.state?.title });
+        if (EDIT_TOOLS.has(p.tool)) this.edits++;
         break;
       case "step_finish": {
         this.steps++;
@@ -127,18 +164,45 @@ export class EventCollector {
         this.tokens.cacheRead += t.cache?.read ?? 0;
         this.tokens.cacheWrite += t.cache?.write ?? 0;
         this.cost += Number(p.cost ?? 0) || 0;
+        if (p.tokens) {
+          const ctx = (t.input ?? 0) + (t.cache?.read ?? 0) + (t.cache?.write ?? 0);
+          if (isCompaction(this.contextTokens, ctx)) this.compactions++;
+          this.contextTokens = ctx;
+        }
         break;
       }
       case "error":
         this.errors.push(errorMessage(e.error ?? e));
         break;
     }
+    return e.type;
+  }
+
+  get progress(): Progress {
+    return {
+      steps: this.steps,
+      toolCalls: this.toolCalls.length,
+      edits: this.edits,
+      compactions: this.compactions,
+      contextTokens: this.contextTokens,
+      lastEventAt: this.lastEventAt,
+    };
   }
 
   /** The final step's text (the answer, minus mid-run narration), else all text, else raw stdout. */
   get text(): string {
     return this.stepTexts.join("\n\n").trim() || this.allTexts.join("\n\n").trim() || this.raw.join("\n").trim();
   }
+}
+
+const kTokens = (n: number) => `${Math.round(n / 1000)}k`;
+
+/** One line for a running task, e.g. `steps 94  tools 100  edits 0  compactions 2  ctx 20k  last activity 12s ago`. */
+export function formatProgress(p: Progress, now = Date.now()): string {
+  const parts = [`steps ${p.steps}`, `tools ${p.toolCalls}`, `edits ${p.edits}`, `compactions ${p.compactions}`, `ctx ${kTokens(p.contextTokens)}`];
+  if (p.nudges) parts.push(`nudges ${p.nudges}`);
+  if (p.lastEventAt) parts.push(`last activity ${Math.max(0, Math.round((now - p.lastEventAt) / 1000))}s ago`);
+  return parts.join("  ");
 }
 
 function errorMessage(err: any): string {
@@ -158,6 +222,7 @@ export function runOpencode(o: RunOptions): Promise<RunResult> {
     let timedOut = false;
     let stalled = false;
     let settled = false;
+    let stopReason: string | undefined;
 
     const kill = () => {
       if (child.exitCode !== null) return;
@@ -165,7 +230,8 @@ export function runOpencode(o: RunOptions): Promise<RunResult> {
       setTimeout(() => child.exitCode === null && child.kill("SIGKILL"), 3000).unref();
     };
     // hard cap (off by default) and stall detection: only a run that goes quiet is stuck
-    const deadline = watchdog(o.timeoutMs, () => {
+    const capMs = o.timeoutMs && Math.max(1, o.timeoutMs - (started - (o.startedAt ?? started)));
+    const deadline = watchdog(capMs, () => {
       timedOut = true;
       kill();
     });
@@ -173,15 +239,21 @@ export function runOpencode(o: RunOptions): Promise<RunResult> {
       timedOut = stalled = true;
       kill();
     });
-    o.signal?.addEventListener("abort", kill, { once: true });
+    if (o.signal?.aborted) kill();
+    else o.signal?.addEventListener("abort", kill, { once: true });
 
     child.stdout.setEncoding("utf8").on("data", (chunk: string) => {
       idle.kick();
       buf += chunk;
       let i: number;
-      while ((i = buf.indexOf("\n")) >= 0) {
-        collector.push(buf.slice(0, i));
+      // nothing after a stop counts
+      while (!stopReason && (i = buf.indexOf("\n")) >= 0) {
+        const type = collector.push(buf.slice(0, i));
         buf = buf.slice(i + 1);
+        o.onProgress?.(collector.progress);
+        if (type !== "step_finish") continue;
+        stopReason = o.checkStep?.(collector);
+        if (stopReason) kill();
       }
     });
     child.stderr.setEncoding("utf8").on("data", (chunk: string) => {
@@ -193,10 +265,11 @@ export function runOpencode(o: RunOptions): Promise<RunResult> {
       settled = true;
       deadline.stop();
       idle.stop();
-      collector.push(buf);
+      if (!stopReason) collector.push(buf);
       const errors = [...collector.errors];
       if (spawnError) errors.push(spawnError);
-      if (stalled) errors.push(`stalled: no output for ${secs(o.idleMs ?? 0)}`);
+      if (stopReason) errors.push(stopReason);
+      else if (stalled) errors.push(`stalled: no output for ${secs(o.idleMs ?? 0)}`);
       else if (timedOut) errors.push(`timed out after ${secs(o.timeoutMs ?? 0)}`);
       else if (o.signal?.aborted) errors.push("cancelled");
       if (exitCode && !errors.length) errors.push(stderr.trim().split("\n").slice(-5).join("\n") || `exit code ${exitCode}`);
@@ -208,6 +281,9 @@ export function runOpencode(o: RunOptions): Promise<RunResult> {
         tokens: collector.tokens,
         cost: collector.cost,
         steps: collector.steps,
+        edits: collector.edits,
+        compactions: collector.compactions,
+        stopped: !!stopReason,
         error: errors.join("; ") || undefined,
         exitCode,
         timedOut,

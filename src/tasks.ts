@@ -1,5 +1,6 @@
 import { randomUUID } from "node:crypto";
-import { delegate, type DelegateInput, type DelegateOutcome } from "./delegate.ts";
+import { delegate, type DelegateInput, type DelegateOptions, type DelegateOutcome } from "./delegate.ts";
+import type { Progress } from "./opencode.ts";
 
 export type TaskStatus = "running" | "done" | "error" | "cancelled";
 
@@ -11,11 +12,13 @@ export interface Task {
   finishedAt?: number;
   outcome?: DelegateOutcome;
   error?: string;
+  // live while running
+  progress?: Progress;
   promise: Promise<void>;
   controller: AbortController;
 }
 
-type Runner = (input: DelegateInput, signal: AbortSignal) => Promise<DelegateOutcome>;
+type Runner = (input: DelegateInput, signal: AbortSignal, opts: DelegateOptions) => Promise<DelegateOutcome>;
 
 const MAX_FINISHED = 100;
 const tasks = new Map<string, Task>();
@@ -28,7 +31,7 @@ function prune() {
 export function startTask(input: DelegateInput, run: Runner = delegate): Task {
   const controller = new AbortController();
   const task = { id: `task_${randomUUID().slice(0, 8)}`, input, status: "running", startedAt: Date.now(), controller } as Task;
-  task.promise = run(input, controller.signal)
+  task.promise = run(input, controller.signal, { onProgress: (p) => (task.progress = p) })
     .then(
       (outcome) => {
         task.outcome = outcome;

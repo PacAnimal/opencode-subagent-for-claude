@@ -21682,6 +21682,8 @@ var config2 = {
   auto: bool(env.OPENCODE_DELEGATE_AUTO, true),
   timeoutSec: int2(env.OPENCODE_DELEGATE_TIMEOUT, 0),
   idleSec: int2(env.OPENCODE_DELEGATE_IDLE_TIMEOUT, 600),
+  loopCompactions: int2(env.OPENCODE_DELEGATE_LOOP_COMPACTIONS, 2),
+  maxNudges: int2(env.OPENCODE_DELEGATE_MAX_NUDGES, 2),
   maxOutputChars: int2(env.OPENCODE_DELEGATE_MAX_OUTPUT, 40000),
   defaultCwd: env.OPENCODE_DELEGATE_CWD || env.CLAUDE_PROJECT_DIR || process.cwd(),
   preferredProviders: (env.OPENCODE_DELEGATE_PREFERRED_PROVIDERS ?? "").split(",").map((p) => p.trim().toLowerCase()).filter(Boolean)
@@ -21730,6 +21732,10 @@ function watchdog(ms, onFire) {
   kick();
   return { kick, stop };
 }
+var COMPACTION_RATIO = 0.5;
+var COMPACTION_MIN_CONTEXT = 50000;
+var EDIT_TOOLS = new Set(["write", "edit", "multiedit", "patch", "apply_patch"]);
+var isCompaction = (prev, next) => prev >= COMPACTION_MIN_CONTEXT && next < prev * COMPACTION_RATIO;
 var secs = (ms) => `${Number((ms / 1000).toFixed(1))}s`;
 
 class EventCollector {
@@ -21738,6 +21744,10 @@ class EventCollector {
   tokens = { input: 0, output: 0, reasoning: 0, cacheRead: 0, cacheWrite: 0 };
   cost = 0;
   steps = 0;
+  edits = 0;
+  compactions = 0;
+  contextTokens = 0;
+  lastEventAt;
   errors = [];
   allTexts = [];
   stepTexts = [];
@@ -21746,6 +21756,7 @@ class EventCollector {
     const trimmed = line.trim();
     if (!trimmed)
       return;
+    this.lastEventAt = Date.now();
     let e;
     try {
       e = JSON.parse(trimmed);
@@ -21768,6 +21779,8 @@ class EventCollector {
         break;
       case "tool_use":
         this.toolCalls.push({ tool: p.tool, status: p.state?.status, title: p.state?.title });
+        if (EDIT_TOOLS.has(p.tool))
+          this.edits++;
         break;
       case "step_finish": {
         this.steps++;
@@ -21778,12 +21791,29 @@ class EventCollector {
         this.tokens.cacheRead += t.cache?.read ?? 0;
         this.tokens.cacheWrite += t.cache?.write ?? 0;
         this.cost += Number(p.cost ?? 0) || 0;
+        if (p.tokens) {
+          const ctx = (t.input ?? 0) + (t.cache?.read ?? 0) + (t.cache?.write ?? 0);
+          if (isCompaction(this.contextTokens, ctx))
+            this.compactions++;
+          this.contextTokens = ctx;
+        }
         break;
       }
       case "error":
         this.errors.push(errorMessage(e.error ?? e));
         break;
     }
+    return e.type;
+  }
+  get progress() {
+    return {
+      steps: this.steps,
+      toolCalls: this.toolCalls.length,
+      edits: this.edits,
+      compactions: this.compactions,
+      contextTokens: this.contextTokens,
+      lastEventAt: this.lastEventAt
+    };
   }
   get text() {
     return this.stepTexts.join(`
@@ -21793,6 +21823,15 @@ class EventCollector {
 `).trim() || this.raw.join(`
 `).trim();
   }
+}
+var kTokens = (n) => `${Math.round(n / 1000)}k`;
+function formatProgress(p, now = Date.now()) {
+  const parts = [`steps ${p.steps}`, `tools ${p.toolCalls}`, `edits ${p.edits}`, `compactions ${p.compactions}`, `ctx ${kTokens(p.contextTokens)}`];
+  if (p.nudges)
+    parts.push(`nudges ${p.nudges}`);
+  if (p.lastEventAt)
+    parts.push(`last activity ${Math.max(0, Math.round((now - p.lastEventAt) / 1000))}s ago`);
+  return parts.join("  ");
 }
 function errorMessage(err) {
   const msg = err?.data?.message ?? err?.message ?? err?.name ?? err?.type;
@@ -21810,13 +21849,15 @@ function runOpencode(o) {
     let timedOut = false;
     let stalled = false;
     let settled = false;
+    let stopReason;
     const kill = () => {
       if (child.exitCode !== null)
         return;
       child.kill("SIGTERM");
       setTimeout(() => child.exitCode === null && child.kill("SIGKILL"), 3000).unref();
     };
-    const deadline = watchdog(o.timeoutMs, () => {
+    const capMs = o.timeoutMs && Math.max(1, o.timeoutMs - (started - (o.startedAt ?? started)));
+    const deadline = watchdog(capMs, () => {
       timedOut = true;
       kill();
     });
@@ -21824,15 +21865,24 @@ function runOpencode(o) {
       timedOut = stalled = true;
       kill();
     });
-    o.signal?.addEventListener("abort", kill, { once: true });
+    if (o.signal?.aborted)
+      kill();
+    else
+      o.signal?.addEventListener("abort", kill, { once: true });
     child.stdout.setEncoding("utf8").on("data", (chunk) => {
       idle.kick();
       buf += chunk;
       let i;
-      while ((i = buf.indexOf(`
+      while (!stopReason && (i = buf.indexOf(`
 `)) >= 0) {
-        collector.push(buf.slice(0, i));
+        const type = collector.push(buf.slice(0, i));
         buf = buf.slice(i + 1);
+        o.onProgress?.(collector.progress);
+        if (type !== "step_finish")
+          continue;
+        stopReason = o.checkStep?.(collector);
+        if (stopReason)
+          kill();
       }
     });
     child.stderr.setEncoding("utf8").on("data", (chunk) => {
@@ -21844,11 +21894,14 @@ function runOpencode(o) {
       settled = true;
       deadline.stop();
       idle.stop();
-      collector.push(buf);
+      if (!stopReason)
+        collector.push(buf);
       const errors = [...collector.errors];
       if (spawnError)
         errors.push(spawnError);
-      if (stalled)
+      if (stopReason)
+        errors.push(stopReason);
+      else if (stalled)
         errors.push(`stalled: no output for ${secs(o.idleMs ?? 0)}`);
       else if (timedOut)
         errors.push(`timed out after ${secs(o.timeoutMs ?? 0)}`);
@@ -21866,6 +21919,9 @@ function runOpencode(o) {
         tokens: collector.tokens,
         cost: collector.cost,
         steps: collector.steps,
+        edits: collector.edits,
+        compactions: collector.compactions,
+        stopped: !!stopReason,
         error: errors.join("; ") || undefined,
         exitCode,
         timedOut,
@@ -22000,6 +22056,11 @@ async function resolveModelOrThrow(query) {
 }
 
 // src/delegate.ts
+var REPORT_FORMAT = `- End your reply with these two sections, in this order:
+## Needs
+Exactly what you need from your lead and why: a tool to install, a config change, a decision, access. Also list anything your code relies on that isn't already in the project (a package not in the manifest, an env var, a config entry), even if you finished. Write "none" only if there is nothing.
+## Result
+A short summary: files changed, and anything left undone.`;
 var GRUNT_RULES = `---
 Rules for this task (from your lead):
 - You are an implementer. Do only the implementation work described above, within the files it gives you. Nothing more.
@@ -22009,11 +22070,15 @@ Rules for this task (from your lead):
 - Do not change project or tool config (package manifests, lock files, build, CI, lint or editor config, env files) unless the task explicitly assigns that file to you.
 - Do not run any other git command that changes state (push, branch, checkout, stash, reset).
 - If you need any of the above, hit a missing tool or permission, or the task is unclear, don't work around it. Do what you can without it, then stop.
-- End your reply with these two sections, in this order:
-## Needs
-Exactly what you need from your lead and why: a tool to install, a config change, a decision, access. Also list anything your code relies on that isn't already in the project (a package not in the manifest, an env var, a config entry), even if you finished. Write "none" only if there is nothing.
-## Result
-A short summary: files changed, and anything left undone.`;
+How to work:
+- Work in increments: read only what you need for the next change, make it, then move on. Don't survey everything first.
+- Your context is limited and gets compacted when it fills. After a compaction, continue from your summary's next step and re-read only the file you are about to edit.
+- Change files with the edit/write tools, not shell redirection.
+${REPORT_FORMAT}`;
+var NUDGE = `Your context has been compacted {n} times without you changing any file. Stop exploring. Using your summary, make the next change now: open only the file you are about to edit, edit it, then continue with the next one.`;
+var nudgePrompt = (n) => `${NUDGE.replace("{n}", String(n))}
+
+${REPORT_FORMAT}`;
 var withGruntRules = (prompt) => `${prompt}
 
 ${GRUNT_RULES}`;
@@ -22043,7 +22108,85 @@ function pickModel(input, cfg = config2) {
     return input.model;
   return input.auto ?? cfg.auto ? cfg.defaultModel : cfg.readModel;
 }
-async function delegate(input, signal) {
+var statusKey = (cwd) => [...gitStatus(cwd) ?? []].sort().join(`
+`);
+function loopGuard(limit, cwd) {
+  let since = 0;
+  let seenEdits = 0;
+  let seenCompactions = 0;
+  let status = limit ? statusKey(cwd) : "";
+  return (c) => {
+    if (!limit)
+      return;
+    if (c.edits > seenEdits)
+      since = 0;
+    seenEdits = c.edits;
+    if (c.compactions === seenCompactions)
+      return;
+    seenCompactions = c.compactions;
+    const now = statusKey(cwd);
+    if (now !== status)
+      since = 0;
+    status = now;
+    since++;
+    return since >= limit ? `looping: compacted ${since} times without changing any file` : undefined;
+  };
+}
+function merge2(runs, startedAt) {
+  const last = runs[runs.length - 1];
+  const sum = (f) => runs.reduce((n, r) => n + f(r), 0);
+  return {
+    ...last,
+    sessionId: last.sessionId ?? runs.find((r) => r.sessionId)?.sessionId,
+    toolCalls: runs.flatMap((r) => r.toolCalls),
+    tokens: {
+      input: sum((r) => r.tokens.input),
+      output: sum((r) => r.tokens.output),
+      reasoning: sum((r) => r.tokens.reasoning),
+      cacheRead: sum((r) => r.tokens.cacheRead),
+      cacheWrite: sum((r) => r.tokens.cacheWrite)
+    },
+    cost: sum((r) => r.cost),
+    steps: sum((r) => r.steps),
+    edits: sum((r) => r.edits),
+    compactions: sum((r) => r.compactions),
+    nudges: runs.length - 1,
+    durationMs: Date.now() - startedAt
+  };
+}
+async function runGuarded(o, guard, cwd = o.cwd ?? process.cwd()) {
+  const startedAt = o.startedAt ?? Date.now();
+  const runs = [];
+  const base = { steps: 0, toolCalls: 0, edits: 0, compactions: 0 };
+  let opts = o;
+  for (;; ) {
+    const nudges = runs.length;
+    const onProgress = (p) => o.onProgress?.({
+      ...p,
+      steps: base.steps + p.steps,
+      toolCalls: base.toolCalls + p.toolCalls,
+      edits: base.edits + p.edits,
+      compactions: base.compactions + p.compactions,
+      nudges
+    });
+    const r = await runOpencode({ ...opts, startedAt, onProgress, checkStep: loopGuard(guard.loopCompactions, cwd) });
+    runs.push(r);
+    base.steps += r.steps;
+    base.toolCalls += r.toolCalls.length;
+    base.edits += r.edits;
+    base.compactions += r.compactions;
+    const sessionId = r.sessionId ?? opts.sessionId;
+    if (!r.stopped || runs.length > guard.maxNudges || !sessionId || o.signal?.aborted)
+      break;
+    const n = Number(r.error?.match(/compacted (\d+) times/)?.[1] ?? guard.loopCompactions);
+    opts = { ...o, prompt: nudgePrompt(n), sessionId, continueLast: false, fork: false, files: undefined, title: undefined };
+  }
+  const result = merge2(runs, startedAt);
+  if (o.signal?.aborted && result.stopped)
+    result.error = [result.error, "cancelled"].filter(Boolean).join("; ");
+  return result;
+}
+async function delegate(input, signal, opts = {}) {
   const cwd = resolve(config2.defaultCwd, input.cwd ?? ".");
   if (!existsSync2(cwd))
     throw new Error(`cwd does not exist: ${cwd}`);
@@ -22053,7 +22196,8 @@ async function delegate(input, signal) {
   const files = input.files?.map((f) => isAbsolute(f) ? f : resolve(cwd, f));
   const before = gitStatus(cwd);
   const head = gitHead(cwd);
-  const result = await runOpencode({
+  const guard = opts.guard ?? { loopCompactions: config2.loopCompactions, maxNudges: config2.maxNudges };
+  const result = await runGuarded({
     prompt: withGruntRules(input.prompt),
     model,
     cwd,
@@ -22066,8 +22210,9 @@ async function delegate(input, signal) {
     title: input.title,
     timeoutMs: (input.timeout_s ?? config2.timeoutSec) * 1000,
     idleMs: config2.idleSec * 1000,
-    signal
-  });
+    signal,
+    onProgress: opts.onProgress
+  }, guard, cwd);
   const after = before && gitStatus(cwd);
   const changedFiles = after ? [...after].filter((l) => !before.has(l)) : undefined;
   const newCommits = head ? commitsSince(cwd, head) : undefined;
@@ -22088,7 +22233,8 @@ function formatOutcome(o, maxChars = config2.maxOutputChars) {
     `model: ${o.model ?? "(opencode default)"}`,
     `session_id: ${r.sessionId ?? "(none)"}`,
     `cwd: ${o.cwd}`,
-    `duration: ${(r.durationMs / 1000).toFixed(1)}s, steps: ${r.steps}, tokens in/out: ${t.input + t.cacheRead}/${t.output}${r.cost ? `, cost: $${r.cost.toFixed(4)}` : ""}`
+    `duration: ${(r.durationMs / 1000).toFixed(1)}s, steps: ${r.steps}, tokens in/out: ${t.input + t.cacheRead}/${t.output}${r.cost ? `, cost: $${r.cost.toFixed(4)}` : ""}`,
+    `edits: ${r.edits ?? 0}, compactions: ${r.compactions ?? 0}${r.nudges ? `, nudges: ${r.nudges} (resumed after compacting without changes)` : ""}`
   ];
   if (r.error)
     lines.push(`error: ${r.error}`);
@@ -22128,7 +22274,7 @@ function prune() {
 function startTask(input, run = delegate) {
   const controller = new AbortController;
   const task = { id: `task_${randomUUID().slice(0, 8)}`, input, status: "running", startedAt: Date.now(), controller };
-  task.promise = run(input, controller.signal).then((outcome) => {
+  task.promise = run(input, controller.signal, { onProgress: (p) => task.progress = p }).then((outcome) => {
     task.outcome = outcome;
     task.status = controller.signal.aborted ? "cancelled" : outcome.result.ok ? "done" : "error";
   }, (err) => {
@@ -22157,7 +22303,7 @@ async function waitTask(task, waitSec) {
 // package.json
 var package_default = {
   name: "opencode-subagent-for-claude",
-  version: "0.4.0",
+  version: "0.5.0",
   description: "Claude Code plugin + MCP server that lets Claude hand work to opencode models and stay the orchestrator.",
   type: "module",
   license: "MIT",
@@ -22192,6 +22338,20 @@ Write a self-contained brief for each task (it can't see this conversation).`;
 var server = new McpServer({ name: "opencode-delegate", version: package_default.version }, { instructions: INSTRUCTIONS });
 var text = (t, isError = false) => ({ content: [{ type: "text", text: t }], isError });
 var errText = (e) => text(e instanceof Error ? e.message : String(e), true);
+async function withHeartbeat(extra, message, work) {
+  const progressToken = extra._meta?.progressToken;
+  let tick = 0;
+  const heartbeat = progressToken !== undefined ? setInterval(() => {
+    tick++;
+    extra.sendNotification({ method: "notifications/progress", params: { progressToken, progress: tick, message: message(tick * 15) } }).catch(() => {});
+  }, 15000) : undefined;
+  try {
+    return await work();
+  } finally {
+    if (heartbeat)
+      clearInterval(heartbeat);
+  }
+}
 var delegateShape = {
   prompt: string2().min(1).describe("Complete, self-contained brief for the opencode model. It cannot see this conversation: include goal, relevant files/paths, constraints, how to verify, and ask for a short report at the end."),
   model: string2().optional().describe(`Exact 'provider/model' id or a loose name ('opus 5.5', 'kimi k3'). Append '#variant' for a reasoning variant. Omit to use the default (${config2.defaultModel ?? "opencode's configured default"}).`),
@@ -22229,26 +22389,20 @@ server.registerTool("delegate", {
   description: "Hand a task to an opencode model and wait for it. It works in `cwd` with its own read/edit/shell tools, so it can implement, not just answer. Only use when the user has asked for opencode. Returns its final answer, session_id, token usage and git changes. It implements only: run the tests, lint and build yourself afterwards. Prefer delegate_async for anything longer than a few minutes.",
   inputSchema: delegateShape
 }, async (input, extra) => {
-  const progressToken = extra._meta?.progressToken;
-  let tick = 0;
-  const heartbeat = progressToken ? setInterval(() => {
-    tick++;
-    extra.sendNotification({ method: "notifications/progress", params: { progressToken, progress: tick, message: `opencode running (${tick * 15}s)` } }).catch(() => {});
-  }, 15000) : undefined;
+  let progress;
+  const message = (s) => `opencode running (${s}s)${progress ? `  ${formatProgress(progress)}` : ""}`;
   try {
-    const outcome = await delegate(input, extra.signal);
+    const outcome = await withHeartbeat(extra, message, () => delegate(input, extra.signal, { onProgress: (p) => progress = p }));
     return text(formatOutcome(outcome), !outcome.result.ok);
   } catch (e) {
     return errText(e);
-  } finally {
-    if (heartbeat)
-      clearInterval(heartbeat);
   }
 });
 function taskSummary(t) {
   const secs = (((t.finishedAt ?? Date.now()) - t.startedAt) / 1000).toFixed(0);
   const model = t.outcome?.model ?? t.input.model ?? "(default)";
-  return `${t.id}  ${t.status.padEnd(9)} ${secs}s  ${model}  ${t.input.title ?? t.input.prompt.slice(0, 60).replace(/\s+/g, " ")}`;
+  const progress = t.status === "running" && t.progress ? `  ${formatProgress(t.progress)}` : "";
+  return `${t.id}  ${t.status.padEnd(9)} ${secs}s${progress}  ${model}  ${t.input.title ?? t.input.prompt.slice(0, 60).replace(/\s+/g, " ")}`;
 }
 server.registerTool("delegate_async", {
   title: "Start an opencode task in the background",
@@ -22261,17 +22415,17 @@ Call task_result with task_id="${t.id}" (optionally wait_s) to get the output.`)
 });
 server.registerTool("task_result", {
   title: "Get a background opencode task's result",
-  description: "Return the status/result of a delegate_async task, optionally waiting up to wait_s seconds for it to finish.",
+  description: "Return the status/result of a delegate_async task, optionally waiting up to wait_s seconds for it to finish. While running it shows live progress: steps, tool calls, file edits, context compactions, context size and time since the last activity.",
   inputSchema: {
     task_id: string2(),
-    wait_s: number2().int().min(0).max(3600).optional().describe("Seconds to wait for completion before returning (default 0).")
+    wait_s: number2().int().min(0).max(3600).optional().describe("Seconds to wait for completion before returning (default 0). Progress notifications are sent every 15s while waiting.")
   },
   annotations: { readOnlyHint: true }
-}, async ({ task_id, wait_s }) => {
+}, async ({ task_id, wait_s }, extra) => {
   const t = getTask(task_id);
   if (!t)
     return text(`unknown task_id '${task_id}'`, true);
-  await waitTask(t, wait_s ?? 0);
+  await withHeartbeat(extra, () => taskSummary(t), () => waitTask(t, wait_s ?? 0));
   if (t.status === "running")
     return text(`${taskSummary(t)}
 still running, call again later or with a larger wait_s.`);
