@@ -1,0 +1,27 @@
+{
+  "name": "opencode-subagent-for-claude",
+  "version": "0.1.0",
+  "description": "Claude Code plugin + MCP server that lets Claude hand work to opencode models and stay the orchestrator.",
+  "type": "module",
+  "license": "MIT",
+  "author": "PacAnimal",
+  "repository": { "type": "git", "url": "git+https://github.com/PacAnimal/opencode-subagent-for-claude.git" },
+  "keywords": ["claude", "claude-code", "mcp", "opencode", "subagent", "delegate"],
+  "bin": { "opencode-subagent-for-claude": "dist/index.js" },
+  "engines": { "bun": ">=1.1" },
+  "scripts": {
+    "start": "bun src/index.ts",
+    "build": "bun build src/index.ts --target=bun --outfile=dist/index.js",
+    "typecheck": "tsc --noEmit",
+    "test": "bun test",
+    "check": "bun run typecheck && bun test && bun run build"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.30.0",
+    "zod": "^4.6.5"
+  },
+  "devDependencies": {
+    "@types/bun": "^1.4.2",
+    "typescript": "^7.0.2"
+  }
+}

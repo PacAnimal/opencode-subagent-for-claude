@@ -1,0 +1,14 @@
+{
+  "name": "opencode-subagent-for-claude",
+  "owner": { "name": "PacAnimal", "url": "https://github.com/PacAnimal" },
+  "metadata": { "description": "Delegate work from Claude Code to opencode." },
+  "plugins": [
+    {
+      "name": "opencode-subagent",
+      "source": "./",
+      "description": "Hand token-heavy work to opencode models while Claude plans, briefs and reviews.",
+      "version": "0.1.0",
+      "category": "development"
+    }
+  ]
+}
