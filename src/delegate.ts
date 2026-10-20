@@ -45,6 +45,7 @@ Your answer: what you were asked for, e.g. the verdict and each finding with fil
 export const READ_RULES = `---
 Rules for this task (from your lead):
 - You are reading, not implementing. Change nothing: no edits, no commits, no installs, no commands that change files, git or the environment.
+- Do not run tests, linters, formatters, type checks or builds; your lead runs them. Read the code and reason about it.
 How to work:
 - Be quick. Every step you take is slow and costly, so take few of them.
 - Read each file you need whole, in one read, rather than in slices; most source files are small. Don't re-read what you have already read.
@@ -57,7 +58,7 @@ export const GRUNT_RULES = `---
 Rules for this task (from your lead):
 - You are an implementer. Do only the implementation work described above, within the files it gives you. Nothing more.
 - Never commit. Leave all changes uncommitted for your lead.
-- Do not run tests, linters, formatters, type checks or builds. Your lead verifies.
+- Do not run tests, linters, formatters, type checks or builds; your lead runs them. Fixing the failures and findings your lead sends you is your job, running the checks is not.
 - Do not install, upgrade or remove anything: no packages, dependencies, tools or SDKs.
 - Do not change project or tool config (package manifests, lock files, build, CI, lint or editor config, env files) unless the task explicitly assigns that file to you.
 - Do not run any other git command that changes state (push, branch, checkout, stash, reset).

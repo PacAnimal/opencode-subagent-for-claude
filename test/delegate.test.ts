@@ -79,6 +79,10 @@ describe("grunt rules", () => {
     expect(p).toStartWith("add a CSV export\n\n");
     expect(p).toEndWith(GRUNT_RULES);
   });
+  test("leave running the checks to the lead, but fixing what they find to the grunt", () => {
+    expect(GRUNT_RULES).toContain("your lead runs them");
+    expect(GRUNT_RULES).toContain("Fixing the failures and findings your lead sends you is your job");
+  });
   test("forbid verification, installs, config and git, and ask for Needs", () => {
     for (const s of ["Never commit", "tests", "linters", "install", "dependencies", "config", "git", "## Needs", "## Result"]) expect(GRUNT_RULES).toContain(s);
   });
@@ -102,6 +106,7 @@ describe("read rules", () => {
   });
   test("read whole files once, in parallel, change nothing, and answer under Result", () => {
     for (const s of ["Change nothing", "whole", "parallel", "re-read", "## Needs", "## Result"]) expect(READ_RULES).toContain(s);
+    expect(READ_RULES).toContain("Do not run tests, linters");
     expect(READ_RULES).not.toContain("implementer");
     expect(READ_RULES).not.toContain("Work in increments");
     expect(READ_RULES).toEndWith(READ_REPORT_FORMAT);
