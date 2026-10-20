@@ -2,9 +2,25 @@
   "name": "opencode-subagent",
   "version": "0.1.0",
   "description": "Hand token-heavy work to opencode models while Claude plans, briefs and reviews.",
-  "author": { "name": "PacAnimal", "url": "https://github.com/PacAnimal" },
+  "author": {
+    "name": "PacAnimal",
+    "url": "https://github.com/PacAnimal"
+  },
   "homepage": "https://github.com/PacAnimal/opencode-subagent-for-claude",
   "repository": "https://github.com/PacAnimal/opencode-subagent-for-claude",
   "license": "MIT",
-  "keywords": ["opencode", "delegate", "subagent", "mcp"]
+  "keywords": [
+    "opencode",
+    "delegate",
+    "subagent",
+    "mcp"
+  ],
+  "mcpServers": {
+    "opencode": {
+      "command": "bun",
+      "args": [
+        "${CLAUDE_PLUGIN_ROOT}/dist/index.js"
+      ]
+    }
+  }
 }
