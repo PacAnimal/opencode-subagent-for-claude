@@ -21681,10 +21681,10 @@ var config2 = {
   readModel: model(env.OPENCODE_DELEGATE_READ_MODEL) ?? defaultModel,
   auto: bool(env.OPENCODE_DELEGATE_AUTO, true),
   timeoutSec: int2(env.OPENCODE_DELEGATE_TIMEOUT, 0),
-  idleSec: int2(env.OPENCODE_DELEGATE_IDLE_TIMEOUT, 600),
+  idleSec: int2(env.OPENCODE_DELEGATE_IDLE_TIMEOUT, 900),
   loopCompactions: int2(env.OPENCODE_DELEGATE_LOOP_COMPACTIONS, 2),
   stallSteps: int2(env.OPENCODE_DELEGATE_STALL_STEPS, 40),
-  maxNudges: int2(env.OPENCODE_DELEGATE_MAX_NUDGES, 2),
+  maxNudges: int2(env.OPENCODE_DELEGATE_MAX_NUDGES, 4),
   maxOutputChars: int2(env.OPENCODE_DELEGATE_MAX_OUTPUT, 40000),
   defaultCwd: env.OPENCODE_DELEGATE_CWD || env.CLAUDE_PROJECT_DIR || process.cwd(),
   preferredProviders: (env.OPENCODE_DELEGATE_PREFERRED_PROVIDERS ?? "").split(",").map((p) => p.trim().toLowerCase()).filter(Boolean)
@@ -22350,7 +22350,7 @@ async function waitTask(task, waitSec) {
 // package.json
 var package_default = {
   name: "opencode-subagent-for-claude",
-  version: "0.6.0",
+  version: "0.6.1",
   description: "Claude Code plugin + MCP server that lets Claude hand work to opencode models and stay the orchestrator.",
   type: "module",
   license: "MIT",
