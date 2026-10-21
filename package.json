@@ -1,6 +1,6 @@
 {
   "name": "opencode-subagent-for-claude",
-  "version": "0.7.2",
+  "version": "0.8.0",
   "description": "Claude Code plugin + MCP server that lets Claude hand work to opencode models and stay the orchestrator.",
   "type": "module",
   "license": "MIT",

@@ -22083,7 +22083,7 @@ var REPORT_FORMAT = `- End your reply with these two sections, in this order:
 ## Needs
 Exactly what you need from your lead and why: a tool to install, a config change, a decision, access. Also list anything your code relies on that isn't already in the project (a package not in the manifest, an env var, a config entry), even if you finished. Write "none" only if there is nothing.
 ## Result
-A short summary: files changed, and anything left undone.`;
+A short summary: files changed, which lint, format, type-check or build commands you ran and whether they passed, and anything left undone.`;
 var READ_REPORT_FORMAT = `- End your reply with these two sections, in this order:
 ## Needs
 Anything you could not check without help from your lead (a tool, access, a decision), and why. Write "none" only if there is nothing.
@@ -22092,7 +22092,7 @@ Your answer: what you were asked for, e.g. the verdict and each finding with fil
 var READ_RULES = `---
 Rules for this task (from your lead):
 - You are reading, not implementing. Change nothing: no edits, no commits, no installs, no commands that change files, git or the environment.
-- Do not run tests, linters, formatters, type checks or builds; your lead runs them. Read the code and reason about it.
+- Do not run tests, linters, formatters, type checks or builds. Read the code and reason about it.
 How to work:
 - Be quick. Every step you take is slow and costly, so take few of them.
 - Read each file you need whole, in one read, rather than in slices; most source files are small. Don't re-read what you have already read.
@@ -22103,7 +22103,7 @@ var GRUNT_RULES = `---
 Rules for this task (from your lead):
 - You are an implementer. Do only the implementation work described above, within the files it gives you. Nothing more.
 - Never commit. Leave all changes uncommitted for your lead.
-- Do not run tests, linters, formatters, type checks or builds; your lead runs them. Fixing the failures and findings your lead sends you is your job, running the checks is not.
+- Do not run tests; your lead runs them. You may run the project's linters, formatters, type checks and builds, and you must fix what they report, as well as the failures and findings your lead sends you.
 - Do not install, upgrade or remove anything: no packages, dependencies, tools or SDKs.
 - Do not change project or tool config (package manifests, lock files, build, CI, lint or editor config, env files) unless the task explicitly assigns that file to you.
 - Do not run any other git command that changes state (push, branch, checkout, stash, reset).
@@ -22431,7 +22431,7 @@ async function waitTask(task, waitSec) {
 // package.json
 var package_default = {
   name: "opencode-subagent-for-claude",
-  version: "0.7.2",
+  version: "0.8.0",
   description: "Claude Code plugin + MCP server that lets Claude hand work to opencode models and stay the orchestrator.",
   type: "module",
   license: "MIT",
@@ -22460,7 +22460,7 @@ var package_default = {
 // src/index.ts
 var INSTRUCTIONS = `Opt-in only. Never use these tools unless the user has asked you to use opencode.
 Once they have, it is mandatory: opencode is your team of junior devs for implementation grunt work. Split the work into scoped tasks and launch many in parallel with delegate_async (separate worktrees or non-overlapping files).
-Grunts do grunt work, nothing more. Rules appended to every brief stop them from verifying, committing, installing anything, or touching config, git or the environment. You run the tests, lint and build yourself, review the diff, then send every failure or review finding back as a new implementation task (same session_id). Repeat until your verification passes.
+Grunts do grunt work, nothing more. Rules appended to every brief let them run lint, format, type-check and build and fix what those report, but stop them from running tests, committing, installing anything, or touching config, git or the environment. You run the tests yourself and review the diff (re-run lint as a final gate if you like), then send every failure or review finding back as a new implementation task (same session_id). Repeat until your verification passes.
 When a result has a NEEDS block (a tool, dependency, config change, access or decision), handle it yourself if it's clearly in scope and safe, otherwise ask the user. Never tell the grunt to do it. Then continue its session. RULE BROKEN means it committed anyway: undo the commit or keep it deliberately.
 Write a self-contained brief for each task (it can't see this conversation).`;
 var server = new McpServer({ name: "opencode-delegate", version: package_default.version }, { instructions: INSTRUCTIONS });
@@ -22514,7 +22514,7 @@ server.registerTool("list_models", {
 });
 server.registerTool("delegate", {
   title: "Delegate a task to opencode",
-  description: "Hand a task to an opencode model and wait for it. It works in `cwd` with its own read/edit/shell tools, so it can implement, not just answer. Only use when the user has asked for opencode. Returns its final answer, session_id, token usage and git changes. It implements only: run the tests, lint and build yourself afterwards. Prefer delegate_async for anything longer than a few minutes.",
+  description: "Hand a task to an opencode model and wait for it. It works in `cwd` with its own read/edit/shell tools, so it can implement, not just answer. Only use when the user has asked for opencode. Returns its final answer, session_id, token usage and git changes. It implements and may run lint and build, never tests: run the tests yourself afterwards and review the diff. Prefer delegate_async for anything longer than a few minutes.",
   inputSchema: delegateShape
 }, async (input, extra) => {
   let progress;

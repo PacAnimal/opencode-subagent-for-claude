@@ -1,6 +1,6 @@
 {
   "name": "opencode-subagent",
-  "version": "0.7.2",
+  "version": "0.8.0",
   "description": "On request, opencode models do the implementation while Claude splits the work and verifies it.",
   "author": {
     "name": "PacAnimal",

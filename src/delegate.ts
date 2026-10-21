@@ -32,7 +32,7 @@ export const REPORT_FORMAT = `- End your reply with these two sections, in this 
 ## Needs
 Exactly what you need from your lead and why: a tool to install, a config change, a decision, access. Also list anything your code relies on that isn't already in the project (a package not in the manifest, an env var, a config entry), even if you finished. Write "none" only if there is nothing.
 ## Result
-A short summary: files changed, and anything left undone.`;
+A short summary: files changed, which lint, format, type-check or build commands you ran and whether they passed, and anything left undone.`;
 
 // the report format every read-only run ends with
 export const READ_REPORT_FORMAT = `- End your reply with these two sections, in this order:
@@ -45,7 +45,7 @@ Your answer: what you were asked for, e.g. the verdict and each finding with fil
 export const READ_RULES = `---
 Rules for this task (from your lead):
 - You are reading, not implementing. Change nothing: no edits, no commits, no installs, no commands that change files, git or the environment.
-- Do not run tests, linters, formatters, type checks or builds; your lead runs them. Read the code and reason about it.
+- Do not run tests, linters, formatters, type checks or builds. Read the code and reason about it.
 How to work:
 - Be quick. Every step you take is slow and costly, so take few of them.
 - Read each file you need whole, in one read, rather than in slices; most source files are small. Don't re-read what you have already read.
@@ -53,12 +53,12 @@ How to work:
 - Answer as soon as you can. Don't keep checking a conclusion you have already reached.
 ${READ_REPORT_FORMAT}`;
 
-// appended to every editing brief; the lead (Claude) verifies and handles anything environmental
+// appended to every editing brief; the lead (Claude) runs the tests and handles anything environmental
 export const GRUNT_RULES = `---
 Rules for this task (from your lead):
 - You are an implementer. Do only the implementation work described above, within the files it gives you. Nothing more.
 - Never commit. Leave all changes uncommitted for your lead.
-- Do not run tests, linters, formatters, type checks or builds; your lead runs them. Fixing the failures and findings your lead sends you is your job, running the checks is not.
+- Do not run tests; your lead runs them. You may run the project's linters, formatters, type checks and builds, and you must fix what they report, as well as the failures and findings your lead sends you.
 - Do not install, upgrade or remove anything: no packages, dependencies, tools or SDKs.
 - Do not change project or tool config (package manifests, lock files, build, CI, lint or editor config, env files) unless the task explicitly assigns that file to you.
 - Do not run any other git command that changes state (push, branch, checkout, stash, reset).
