@@ -22142,12 +22142,49 @@ function commitsSince(cwd, head) {
   return r.status === 0 ? r.stdout.split(`
 `).filter(Boolean) : [];
 }
+var DELETED = "(deleted)";
 function gitStatus(cwd) {
-  const r = spawnSync("git", ["status", "--porcelain", "--untracked-files=all"], { cwd, encoding: "utf8" });
+  const r = spawnSync("git", ["status", "--porcelain", "--untracked-files=all", "-z"], { cwd, encoding: "utf8" });
   if (r.status !== 0)
     return;
-  return new Set(r.stdout.split(`
-`).filter(Boolean));
+  const status = new Map;
+  const entries = r.stdout.split("\x00").filter(Boolean);
+  for (let i = 0;i < entries.length; i++) {
+    const entry = entries[i];
+    const code = entry.slice(0, 2);
+    const path = entry.slice(3);
+    const renamed = code[0] === "R" || code[0] === "C";
+    const from = renamed ? entries[++i] : undefined;
+    status.set(path, from ? `${code} ${from} -> ${path}` : `${code} ${path}`);
+  }
+  const fingerprint = new Map;
+  const toHash = [];
+  for (const [p, line] of status) {
+    if (line.slice(0, 2).includes("D"))
+      fingerprint.set(p, DELETED);
+    else
+      toHash.push(p);
+  }
+  if (toHash.length) {
+    const h = spawnSync("git", ["hash-object", "--stdin-paths"], { cwd, input: toHash.map((p) => `${p}
+`).join(""), encoding: "utf8" });
+    const hashes = h.status === 0 ? h.stdout.split(`
+`).filter(Boolean) : [];
+    toHash.forEach((p, i) => fingerprint.set(p, hashes[i] ?? ""));
+  }
+  return { status, fingerprint };
+}
+function gitDiff(before, after) {
+  const paths = new Set([...before.status.keys(), ...after.status.keys()]);
+  const changed = [];
+  for (const p of paths) {
+    const beforeLine = before.status.get(p);
+    const afterLine = after.status.get(p);
+    if (beforeLine === undefined || afterLine === undefined || beforeLine !== afterLine || before.fingerprint.get(p) !== after.fingerprint.get(p)) {
+      changed.push(afterLine ?? beforeLine);
+    }
+  }
+  return changed;
 }
 function pickModel(input, cfg = config2) {
   if (input.model)
@@ -22155,8 +22192,13 @@ function pickModel(input, cfg = config2) {
   return input.auto ?? cfg.auto ? cfg.defaultModel : cfg.readModel;
 }
 var STALL_STATUS_EVERY = 5;
-var statusKey = (cwd) => [...gitStatus(cwd) ?? []].sort().join(`
+var statusKey = (cwd) => {
+  const snap = gitStatus(cwd);
+  if (!snap)
+    return "";
+  return [...snap.fingerprint].map(([p, f]) => `${p}:${f}`).sort().join(`
 `);
+};
 function loopGuard(limit, cwd, stallSteps = 0) {
   let since = 0;
   let idle = 0;
@@ -22293,7 +22335,7 @@ async function delegate(input, signal, opts = {}) {
     onProgress: opts.onProgress
   }, guard, cwd);
   const after = before && gitStatus(cwd);
-  const changedFiles = after ? [...after].filter((l) => !before.has(l)) : undefined;
+  const changedFiles = after ? gitDiff(before, after) : undefined;
   const newCommits = head ? commitsSince(cwd, head) : undefined;
   return { model, cwd, result, changedFiles, newCommits };
 }
@@ -22389,7 +22431,7 @@ async function waitTask(task, waitSec) {
 // package.json
 var package_default = {
   name: "opencode-subagent-for-claude",
-  version: "0.7.1",
+  version: "0.7.2",
   description: "Claude Code plugin + MCP server that lets Claude hand work to opencode models and stay the orchestrator.",
   type: "module",
   license: "MIT",

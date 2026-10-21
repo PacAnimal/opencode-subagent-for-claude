@@ -1,6 +1,25 @@
-import { describe, expect, test } from "bun:test";
-import { extractNeeds, formatOutcome, GRUNT_RULES, nudgePrompt, pickModel, READ_REPORT_FORMAT, READ_RULES, REPORT_FORMAT, withRules, wrapUpPrompt, type DelegateOutcome } from "../src/delegate.ts";
-import type { RunResult } from "../src/opencode.ts";
+import { afterEach, beforeEach, describe, expect, test } from "bun:test";
+import { execFileSync } from "node:child_process";
+import { mkdtempSync, rmSync, unlinkSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import {
+  extractNeeds,
+  formatOutcome,
+  gitDiff,
+  gitStatus,
+  GRUNT_RULES,
+  loopGuard,
+  nudgePrompt,
+  pickModel,
+  READ_REPORT_FORMAT,
+  READ_RULES,
+  REPORT_FORMAT,
+  withRules,
+  wrapUpPrompt,
+  type DelegateOutcome,
+} from "../src/delegate.ts";
+import type { EventCollector, RunResult } from "../src/opencode.ts";
 
 const cfg = (over: Partial<{ auto: boolean; defaultModel?: string; readModel?: string }>) =>
   ({ auto: true, defaultModel: "p/edit", readModel: "p/read", ...over }) as any;
@@ -141,4 +160,70 @@ test("commits made by opencode are flagged", () => {
   const s = formatOutcome({ cwd: "/w", result: result(), newCommits: ["abc1234 sneaky commit"] });
   expect(s).toContain("RULE BROKEN: opencode committed (undo or keep it yourself):\n  abc1234 sneaky commit");
   expect(formatOutcome({ cwd: "/w", result: result(), newCommits: [] })).not.toContain("RULE BROKEN");
+});
+
+describe("git snapshot", () => {
+  let dir: string;
+  const git = (...args: string[]) => execFileSync("git", args, { cwd: dir, encoding: "utf8" });
+
+  beforeEach(() => {
+    dir = mkdtempSync(join(tmpdir(), "gitsnap-"));
+    git("init", "-q");
+    git("config", "user.email", "a@a.com");
+    git("config", "user.name", "a");
+  });
+  afterEach(() => rmSync(dir, { recursive: true, force: true }));
+
+  const commit = (path: string, content: string) => {
+    writeFileSync(join(dir, path), content);
+    git("add", path);
+    git("commit", "-qm", path);
+  };
+
+  test("editing an already-modified tracked file is reported", () => {
+    commit("a.txt", "one\n");
+    writeFileSync(join(dir, "a.txt"), "two\n");
+    const before = gitStatus(dir)!;
+    writeFileSync(join(dir, "a.txt"), "three\n");
+    expect(gitDiff(before, gitStatus(dir)!)).toEqual([" M a.txt"]);
+  });
+
+  test("editing an already-untracked file is reported", () => {
+    writeFileSync(join(dir, "b.txt"), "one\n");
+    const before = gitStatus(dir)!;
+    writeFileSync(join(dir, "b.txt"), "two\n");
+    expect(gitDiff(before, gitStatus(dir)!)).toEqual(["?? b.txt"]);
+  });
+
+  test("an untouched dirty file is not reported", () => {
+    commit("a.txt", "one\n");
+    writeFileSync(join(dir, "a.txt"), "two\n");
+    const before = gitStatus(dir)!;
+    expect(gitDiff(before, gitStatus(dir)!)).toEqual([]);
+  });
+
+  test("a new file is reported", () => {
+    commit("a.txt", "one\n");
+    const before = gitStatus(dir)!;
+    writeFileSync(join(dir, "new.txt"), "fresh\n");
+    expect(gitDiff(before, gitStatus(dir)!)).toEqual(["?? new.txt"]);
+  });
+
+  test("a deleted file is reported", () => {
+    commit("a.txt", "one\n");
+    const before = gitStatus(dir)!;
+    unlinkSync(join(dir, "a.txt"));
+    expect(gitDiff(before, gitStatus(dir)!)).toEqual([" D a.txt"]);
+  });
+
+  test("a content change to an already-dirty file counts as guard progress, no nudge", () => {
+    commit("a.txt", "one\n");
+    writeFileSync(join(dir, "a.txt"), "two\n");
+    const state = (edits: number, compactions: number) => ({ edits, compactions }) as EventCollector;
+    const check = loopGuard(2, dir);
+    expect(check(state(0, 1))).toBeUndefined();
+    // changed via shell, not the edit tool; the status line stays " M a.txt"
+    writeFileSync(join(dir, "a.txt"), "three\n");
+    expect(check(state(0, 2))).toBeUndefined();
+  });
 });
