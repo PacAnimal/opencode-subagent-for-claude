@@ -1,6 +1,6 @@
 ---
 name: opencode-delegate
-description: Delegate implementation grunt work to opencode models (a team of junior devs you can run in parallel) while Claude orchestrates and does all verification (tests, lint, build, review). Use ONLY when the user explicitly asks for opencode ("use opencode", "have opencode do it", "delegate this to opencode", "ask <model> via opencode"). Never on your own initiative. Once asked, it is mandatory for all implementation work that can be delegated.
+description: Delegate implementation grunt work to opencode models (a team of junior devs you can run in parallel) while Claude orchestrates, runs the tests and reviews the diff. Use ONLY when the user explicitly asks for opencode ("use opencode", "have opencode do it", "delegate this to opencode", "ask <model> via opencode"). Never on your own initiative. Once asked, it is mandatory for all implementation work that can be delegated.
 ---
 
 # Delegating to opencode
@@ -17,13 +17,13 @@ The `opencode` MCP server runs tasks with `opencode run` in the project. Each ru
 | opencode (juniors) | You (lead) |
 |---|---|
 | Implementation: new code, changes, refactors, renames, boilerplate, test code, docs | Splitting the work and writing briefs |
-| Fixing what you send back | Running tests, lint and build |
-| | Reviewing every diff |
+| Running lint, format, type-check and build, and fixing what they report | Running tests (and lint again as a final gate, if you like) |
+| Fixing what you send back | Reviewing every diff |
 | | Deciding when it's done, and reporting to the user |
 
-Grunts do grunt work, nothing more. They never run tests, linters or builds, never commit, never install anything, never change config or environment, and never judge whether their own work is done.
+Grunts do grunt work, nothing more. They may run the project's linters, formatters, type checks and builds and fix what they find, but they never run tests, never commit, never install anything, never change config or environment, and never judge whether their own work is done.
 
-**The server enforces this.** It appends a fixed rules block to every brief, so you don't have to repeat it. The block tells the grunt to stay in scope, never commit, verify nothing, install nothing, leave config, git and the environment alone, and finish with `## Needs` and `## Result` sections. After the run, the server flags any commit it made anyway as `RULE BROKEN`. Undo that commit, or keep it deliberately, then tell the grunt not to do it again.
+**The server enforces this.** It appends a fixed rules block to every brief, so you don't have to repeat it. The block tells the grunt to stay in scope, never commit, run no tests, install nothing, leave config, git and the environment alone, and finish with `## Needs` and `## Result` sections (the Result says which lint or build commands it ran and whether they passed). After the run, the server flags any commit it made anyway as `RULE BROKEN`. Undo that commit, or keep it deliberately, then tell the grunt not to do it again.
 
 ## When a grunt needs something
 
@@ -42,8 +42,8 @@ A grunt that worked around a need instead of reporting it (installed something, 
 2. **Launch** one `delegate_async` per task, in parallel. Tasks that edit files need **separate git worktrees** or non-overlapping files.
 3. **Collect** with `task_result` (`wait_s`).
 4. **Unblock**: handle every `NEEDS` block (see above) and continue those sessions.
-5. **Verify yourself**: read the diff, then run the project's tests, lint and build.
-6. **Send it back**: every failure, lint finding or review comment becomes a new implementation task in the **same session** (`session_id`). Paste the exact errors and say what to change.
+5. **Verify yourself**: read the diff, then run the project's tests. Re-run lint as a final gate if you like.
+6. **Send it back**: every test failure or review comment becomes a new implementation task in the **same session** (`session_id`). Lint and build failures can go straight back too, or the grunt fixes them itself. Paste the exact errors and say what to change.
 7. **Repeat** from 3 until your verification is clean. Fix things yourself only when a task is trivial or opencode keeps failing at it, and tell the user when you do.
 
 ## Tools
@@ -73,7 +73,7 @@ The junior **cannot see this conversation**. Brief it like a new hire:
 3. **Scope**: the files it owns, and what not to touch. Keep to it, since other juniors work in parallel.
 4. **Constraints**: the style to match. If the task really does need a config or manifest file edited, assign that file explicitly. Otherwise grunts leave config alone.
 
-The rules block (no verifying, no commits, no installs, no config, Needs and Result sections) is appended for you.
+The rules block (no tests, lint and build allowed, no commits, no installs, no config, Needs and Result sections) is appended for you.
 
 Use `files` to attach key files. Keep `cwd` at the project root (or the task's worktree).
 
