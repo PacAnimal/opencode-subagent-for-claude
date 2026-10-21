@@ -102,10 +102,61 @@ function commitsSince(cwd: string, head: string): string[] {
   return r.status === 0 ? r.stdout.split("\n").filter(Boolean) : [];
 }
 
-export function gitStatus(cwd: string): Set<string> | undefined {
-  const r = spawnSync("git", ["status", "--porcelain", "--untracked-files=all"], { cwd, encoding: "utf8" });
+// one entry per changed path: its status line (for display) and a fingerprint of its current content
+export interface GitSnapshot {
+  status: Map<string, string>;
+  fingerprint: Map<string, string>;
+}
+
+// sentinel fingerprint for a path git status lists but that has no content to hash (deleted)
+const DELETED = "(deleted)";
+
+/**
+ * Snapshots the working tree as path -> status line and path -> content fingerprint, using
+ * `git status -z` (robust against renames and paths with spaces or quotes) plus a single
+ * `git hash-object --stdin-paths` call for every path that still has content on disk.
+ */
+export function gitStatus(cwd: string): GitSnapshot | undefined {
+  const r = spawnSync("git", ["status", "--porcelain", "--untracked-files=all", "-z"], { cwd, encoding: "utf8" });
   if (r.status !== 0) return undefined;
-  return new Set(r.stdout.split("\n").filter(Boolean));
+  const status = new Map<string, string>();
+  const entries = r.stdout.split("\0").filter(Boolean);
+  for (let i = 0; i < entries.length; i++) {
+    const entry = entries[i]!;
+    const code = entry.slice(0, 2);
+    const path = entry.slice(3);
+    // a rename/copy is followed by the origin path as its own NUL-terminated field
+    const renamed = code[0] === "R" || code[0] === "C";
+    const from = renamed ? entries[++i] : undefined;
+    status.set(path, from ? `${code} ${from} -> ${path}` : `${code} ${path}`);
+  }
+  const fingerprint = new Map<string, string>();
+  const toHash: string[] = [];
+  for (const [p, line] of status) {
+    // status paths are relative to the repo root, not cwd, so deletions are read from the status code
+    if (line.slice(0, 2).includes("D")) fingerprint.set(p, DELETED);
+    else toHash.push(p);
+  }
+  if (toHash.length) {
+    const h = spawnSync("git", ["hash-object", "--stdin-paths"], { cwd, input: toHash.map((p) => `${p}\n`).join(""), encoding: "utf8" });
+    const hashes = h.status === 0 ? h.stdout.split("\n").filter(Boolean) : [];
+    toHash.forEach((p, i) => fingerprint.set(p, hashes[i] ?? ""));
+  }
+  return { status, fingerprint };
+}
+
+/** The paths whose status line or content fingerprint differ between two snapshots, or that appeared/disappeared, rendered as status lines. */
+export function gitDiff(before: GitSnapshot, after: GitSnapshot): string[] {
+  const paths = new Set([...before.status.keys(), ...after.status.keys()]);
+  const changed: string[] = [];
+  for (const p of paths) {
+    const beforeLine = before.status.get(p);
+    const afterLine = after.status.get(p);
+    if (beforeLine === undefined || afterLine === undefined || beforeLine !== afterLine || before.fingerprint.get(p) !== after.fingerprint.get(p)) {
+      changed.push(afterLine ?? beforeLine!);
+    }
+  }
+  return changed;
 }
 
 export function pickModel(input: Pick<DelegateInput, "model" | "auto">, cfg = config): string | undefined {
@@ -127,7 +178,12 @@ export interface GuardConfig {
 // steps between git status checks while counting toward a stall
 export const STALL_STATUS_EVERY = 5;
 
-const statusKey = (cwd: string) => [...(gitStatus(cwd) ?? [])].sort().join("\n");
+// a key that changes whenever a tracked or untracked path's content changes, even if its status code doesn't
+const statusKey = (cwd: string) => {
+  const snap = gitStatus(cwd);
+  if (!snap) return "";
+  return [...snap.fingerprint].map(([p, f]) => `${p}:${f}`).sort().join("\n");
+};
 
 /**
  * checkStep for runOpencode: stops a run once it compacts `limit` times, or runs `stallSteps` steps,
@@ -275,7 +331,7 @@ export async function delegate(input: DelegateInput, signal?: AbortSignal, opts:
     cwd,
   );
   const after = before && gitStatus(cwd);
-  const changedFiles = after ? [...after].filter((l) => !before!.has(l)) : undefined;
+  const changedFiles = after ? gitDiff(before!, after) : undefined;
   const newCommits = head ? commitsSince(cwd, head) : undefined;
   return { model, cwd, result, changedFiles, newCommits };
 }

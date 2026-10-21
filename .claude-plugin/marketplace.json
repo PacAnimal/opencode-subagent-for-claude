@@ -7,7 +7,7 @@
       "name": "opencode-subagent",
       "source": "./",
       "description": "On request, opencode models do the implementation while Claude splits the work and verifies it.",
-      "version": "0.7.1",
+      "version": "0.7.2",
       "category": "development"
     }
   ]
