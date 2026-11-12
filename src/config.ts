@@ -46,6 +46,8 @@ export const config = {
   // used for read-only runs (auto: false) when no model is given
   readModel: model(env.OPENCODE_DELEGATE_READ_MODEL) ?? defaultModel,
   auto: bool(env.OPENCODE_DELEGATE_AUTO, true),
+  // runs (and every tool they start) get the lowest cpu and i/o priority
+  lowPriority: bool(env.OPENCODE_DELEGATE_LOW_PRIORITY, true),
   // hard cap off by default; a run is only killed once it stops producing output
   timeoutSec: int(env.OPENCODE_DELEGATE_TIMEOUT, 0),
   idleSec: int(env.OPENCODE_DELEGATE_IDLE_TIMEOUT, 900),

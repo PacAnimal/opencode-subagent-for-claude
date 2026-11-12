@@ -1,9 +1,9 @@
 import { afterEach, beforeEach, describe, expect, jest, test } from "bun:test";
-import { existsSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
-import { tmpdir } from "node:os";
+import { mkdtempSync, readFileSync, rmSync } from "node:fs";
+import { getPriority, tmpdir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { runOpencode, watchdog } from "../src/opencode.ts";
+import { lowPriorityCommand, runOpencode, watchdog } from "../src/opencode.ts";
 
 describe("watchdog", () => {
   beforeEach(() => jest.useFakeTimers());
@@ -57,7 +57,15 @@ describe("runOpencode with a fake binary", () => {
     delete process.env.FAKE_LOG;
     rmSync(dir, { recursive: true, force: true });
   });
-  const interrupts = () => (existsSync(log) ? readFileSync(log, "utf8").split("\n").filter((l) => l.startsWith("ARGS api ")) : []);
+  const alive = (pid: number) => {
+    try {
+      process.kill(pid, 0);
+      return true;
+    } catch {
+      return false;
+    }
+  };
+  const niceness = () => Number(readFileSync(`${log}.nice`, "utf8"));
 
   test("a silent run is killed as stalled", async () => {
     process.env.FAKE_MODE = "hang";
@@ -66,23 +74,37 @@ describe("runOpencode with a fake binary", () => {
     expect(r.timedOut).toBe(true);
     expect(r.error).toBe("stalled: no output for 0.2s");
   });
-  test("a killed run is interrupted on the service too, which outlives the client", async () => {
-    process.env.FAKE_MODE = "hang";
-    await runOpencode({ prompt: "p", bin, idleMs: 200 });
-    expect(interrupts()).toEqual(["ARGS api session.interrupt --param sessionID=ses_fake"]);
-  });
-  test("a cancelled run is interrupted on the service", async () => {
+  test("a cancelled run takes the processes it started down with it", async () => {
     process.env.FAKE_MODE = "hang";
     const controller = new AbortController();
-    setTimeout(() => controller.abort(), 200);
-    const r = await runOpencode({ prompt: "p", bin, idleMs: 60_000, signal: controller.signal });
+    // the first event comes after the child has started
+    const r = await runOpencode({ prompt: "p", bin, idleMs: 60_000, signal: controller.signal, onProgress: () => controller.abort() });
     expect(r.error).toBe("cancelled");
-    expect(interrupts()).toEqual(["ARGS api session.interrupt --param sessionID=ses_fake"]);
+    expect(alive(Number(readFileSync(`${log}.child`, "utf8")))).toBe(false);
+  });
+  test("runs at the lowest priority", async () => {
+    await runOpencode({ prompt: "p", bin, idleMs: 60_000 });
+    expect(niceness()).toBe(process.platform === "darwin" ? 20 : 19);
+  });
+  test("low priority can be turned off", async () => {
+    await runOpencode({ prompt: "p", bin, idleMs: 60_000, lowPriority: false });
+    expect(niceness()).toBe(getPriority());
   });
   test("a run that finishes is untouched", async () => {
     const r = await runOpencode({ prompt: "p", bin, idleMs: 60_000 });
     expect(r.ok).toBe(true);
     expect(r.text).toBe("done");
-    expect(interrupts()).toEqual([]);
+  });
+});
+
+describe("lowPriorityCommand", () => {
+  test("darwin adds background policy", () => {
+    expect(lowPriorityCommand("oc", ["run"], "darwin")).toEqual(["/usr/sbin/taskpolicy", ["-b", "/usr/bin/nice", "-n", "20", "oc", "run"]]);
+  });
+  test("linux uses nice", () => {
+    expect(lowPriorityCommand("oc", ["run"], "linux")).toEqual(["nice", ["-n", "19", "oc", "run"]]);
+  });
+  test("windows is lowered after spawn", () => {
+    expect(lowPriorityCommand("oc", ["run"], "win32")).toEqual(["oc", ["run"]]);
   });
 });

@@ -1,4 +1,5 @@
-import { spawn } from "node:child_process";
+import { type ChildProcess, spawn } from "node:child_process";
+import { constants, setPriority } from "node:os";
 import { config } from "./config.ts";
 
 export interface RunOptions {
@@ -18,6 +19,7 @@ export interface RunOptions {
   idleMs?: number;
   signal?: AbortSignal;
   bin?: string;
+  lowPriority?: boolean;
   onProgress?: (p: Progress) => void;
   // called after each step; returning a reason stops the run at that step boundary
   checkStep?: (c: EventCollector) => string | undefined;
@@ -72,7 +74,8 @@ export interface RunResult {
 }
 
 export function buildArgs(o: RunOptions): string[] {
-  const args = ["run", "--format", "json"];
+  // a private server in the run's own process, so its priority and lifetime are ours, not the shared service's
+  const args = ["run", "--standalone", "--format", "json"];
   if (o.model) args.push("--model", o.model);
   if (o.agent) args.push("--agent", o.agent);
   if (o.sessionId) args.push("--session", o.sessionId);
@@ -221,19 +224,22 @@ function errorMessage(err: any): string {
   return typeof msg === "string" ? msg + ref : JSON.stringify(err);
 }
 
-/** Stops a session on the background service, which keeps running it after its `opencode run` client is killed. */
-export function interruptSession(sessionId: string, cwd?: string, bin = config.bin): Promise<void> {
-  return new Promise((resolve) => {
-    const child = spawn(bin, ["api", "session.interrupt", "--param", `sessionID=${sessionId}`], { cwd, env: runEnv(cwd), stdio: "ignore" });
-    // never hangs the run on an unreachable service
-    const timer = setTimeout(() => child.kill("SIGKILL"), 10_000);
-    const done = () => {
-      clearTimeout(timer);
-      resolve();
-    };
-    child.on("error", done);
-    child.on("close", done);
-  });
+/** Wraps a command so it and everything it starts run at the lowest cpu and i/o priority. Windows is lowered after spawn instead. */
+export function lowPriorityCommand(bin: string, args: string[], platform = process.platform): [string, string[]] {
+  // darwin background policy: efficiency cores, throttled disk and network
+  if (platform === "darwin") return ["/usr/sbin/taskpolicy", ["-b", "/usr/bin/nice", "-n", "20", bin, ...args]];
+  if (platform === "win32") return [bin, args];
+  return ["nice", ["-n", "19", bin, ...args]];
+}
+
+const isWindows = process.platform === "win32";
+
+// a run leads its own process group, so stopping it takes its server and tools down too
+function killTree(child: ChildProcess, signal: NodeJS.Signals) {
+  try {
+    if (isWindows || !child.pid) child.kill(signal);
+    else process.kill(-child.pid, signal);
+  } catch {}
 }
 
 export function runOpencode(o: RunOptions): Promise<RunResult> {
@@ -241,7 +247,14 @@ export function runOpencode(o: RunOptions): Promise<RunResult> {
   const collector = new EventCollector();
   return new Promise((resolve) => {
     const bin = o.bin ?? config.bin;
-    const child = spawn(bin, buildArgs(o), { cwd: o.cwd, env: runEnv(o.cwd), stdio: ["ignore", "pipe", "pipe"] });
+    const low = o.lowPriority ?? config.lowPriority;
+    const [cmd, args] = low ? lowPriorityCommand(bin, buildArgs(o)) : [bin, buildArgs(o)];
+    const child = spawn(cmd, args, { cwd: o.cwd, env: runEnv(o.cwd), stdio: ["ignore", "pipe", "pipe"], detached: !isWindows });
+    if (low && isWindows && child.pid) {
+      try {
+        setPriority(child.pid, constants.priority.PRIORITY_LOW);
+      } catch {}
+    }
     let buf = "";
     let stderr = "";
     let timedOut = false;
@@ -253,8 +266,8 @@ export function runOpencode(o: RunOptions): Promise<RunResult> {
     const kill = () => {
       if (child.exitCode !== null) return;
       killed = true;
-      child.kill("SIGTERM");
-      setTimeout(() => child.exitCode === null && child.kill("SIGKILL"), 3000).unref();
+      killTree(child, "SIGTERM");
+      setTimeout(() => child.exitCode === null && killTree(child, "SIGKILL"), 3000).unref();
     };
     // hard cap (off by default) and stall detection: only a run that goes quiet is stuck
     const capMs = o.timeoutMs && Math.max(1, o.timeoutMs - (started - (o.startedAt ?? started)));
@@ -292,7 +305,6 @@ export function runOpencode(o: RunOptions): Promise<RunResult> {
       settled = true;
       deadline.stop();
       idle.stop();
-      if (killed && collector.sessionId) await interruptSession(collector.sessionId, o.cwd, bin);
       if (!stopReason) collector.push(buf);
       const errors = [...collector.errors];
       if (spawnError) errors.push(spawnError);

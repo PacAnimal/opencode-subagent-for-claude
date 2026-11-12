@@ -21680,6 +21680,7 @@ var config2 = {
   defaultModel,
   readModel: model(env.OPENCODE_DELEGATE_READ_MODEL) ?? defaultModel,
   auto: bool(env.OPENCODE_DELEGATE_AUTO, true),
+  lowPriority: bool(env.OPENCODE_DELEGATE_LOW_PRIORITY, true),
   timeoutSec: int2(env.OPENCODE_DELEGATE_TIMEOUT, 0),
   idleSec: int2(env.OPENCODE_DELEGATE_IDLE_TIMEOUT, 900),
   loopCompactions: int2(env.OPENCODE_DELEGATE_LOOP_COMPACTIONS, 2),
@@ -21698,8 +21699,9 @@ import { isAbsolute, resolve } from "path";
 
 // src/opencode.ts
 import { spawn } from "child_process";
+import { constants, setPriority } from "os";
 function buildArgs(o) {
-  const args = ["run", "--format", "json"];
+  const args = ["run", "--standalone", "--format", "json"];
   if (o.model)
     args.push("--model", o.model);
   if (o.agent)
@@ -21845,24 +21847,35 @@ function errorMessage(err) {
   const ref = err?.data?.ref ? ` (ref ${err.data.ref})` : "";
   return typeof msg === "string" ? msg + ref : JSON.stringify(err);
 }
-function interruptSession(sessionId, cwd, bin = config2.bin) {
-  return new Promise((resolve) => {
-    const child = spawn(bin, ["api", "session.interrupt", "--param", `sessionID=${sessionId}`], { cwd, env: runEnv(cwd), stdio: "ignore" });
-    const timer = setTimeout(() => child.kill("SIGKILL"), 1e4);
-    const done = () => {
-      clearTimeout(timer);
-      resolve();
-    };
-    child.on("error", done);
-    child.on("close", done);
-  });
+function lowPriorityCommand(bin, args, platform = process.platform) {
+  if (platform === "darwin")
+    return ["/usr/sbin/taskpolicy", ["-b", "/usr/bin/nice", "-n", "20", bin, ...args]];
+  if (platform === "win32")
+    return [bin, args];
+  return ["nice", ["-n", "19", bin, ...args]];
+}
+var isWindows = process.platform === "win32";
+function killTree(child, signal) {
+  try {
+    if (isWindows || !child.pid)
+      child.kill(signal);
+    else
+      process.kill(-child.pid, signal);
+  } catch {}
 }
 function runOpencode(o) {
   const started = Date.now();
   const collector = new EventCollector;
   return new Promise((resolve) => {
     const bin = o.bin ?? config2.bin;
-    const child = spawn(bin, buildArgs(o), { cwd: o.cwd, env: runEnv(o.cwd), stdio: ["ignore", "pipe", "pipe"] });
+    const low = o.lowPriority ?? config2.lowPriority;
+    const [cmd, args] = low ? lowPriorityCommand(bin, buildArgs(o)) : [bin, buildArgs(o)];
+    const child = spawn(cmd, args, { cwd: o.cwd, env: runEnv(o.cwd), stdio: ["ignore", "pipe", "pipe"], detached: !isWindows });
+    if (low && isWindows && child.pid) {
+      try {
+        setPriority(child.pid, constants.priority.PRIORITY_LOW);
+      } catch {}
+    }
     let buf = "";
     let stderr = "";
     let timedOut = false;
@@ -21874,8 +21887,8 @@ function runOpencode(o) {
       if (child.exitCode !== null)
         return;
       killed = true;
-      child.kill("SIGTERM");
-      setTimeout(() => child.exitCode === null && child.kill("SIGKILL"), 3000).unref();
+      killTree(child, "SIGTERM");
+      setTimeout(() => child.exitCode === null && killTree(child, "SIGKILL"), 3000).unref();
     };
     const capMs = o.timeoutMs && Math.max(1, o.timeoutMs - (started - (o.startedAt ?? started)));
     const deadline = watchdog(capMs, () => {
@@ -21915,8 +21928,6 @@ function runOpencode(o) {
       settled = true;
       deadline.stop();
       idle.stop();
-      if (killed && collector.sessionId)
-        await interruptSession(collector.sessionId, o.cwd, bin);
       if (!stopReason)
         collector.push(buf);
       const errors = [...collector.errors];
@@ -22431,7 +22442,7 @@ async function waitTask(task, waitSec) {
 // package.json
 var package_default = {
   name: "opencode-subagent-for-claude",
-  version: "0.8.0",
+  version: "0.9.0",
   description: "Claude Code plugin + MCP server that lets Claude hand work to opencode models and stay the orchestrator.",
   type: "module",
   license: "MIT",

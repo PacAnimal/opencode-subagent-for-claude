@@ -23,9 +23,7 @@ afterEach(() => {
   rmSync(dir, { recursive: true, force: true });
 });
 
-const lines = () => readFileSync(log, "utf8").split("\n").filter(Boolean);
-// runs only; interrupts sent to the service are logged as `ARGS api …`
-const calls = () => lines().filter((l) => !l.startsWith("ARGS api "));
+const calls = () => readFileSync(log, "utf8").split("\n").filter(Boolean);
 const run = (mode: string, loopCompactions = 2, maxNudges = 2, extra = {}, stallSteps = 0, readSteps = 0) => {
   process.env.FAKE_MODE = mode;
   return runGuarded({ prompt: "refactor everything", bin, cwd: dir, idleMs: 60_000, ...extra }, { loopCompactions, stallSteps, readSteps, maxNudges });
@@ -50,13 +48,6 @@ describe("loop guard", () => {
     expect(first).not.toContain("--session");
     expect(second).toContain("--session ses_fake");
     expect(second).toEndWith(`-- ${nudgePrompt(2).replaceAll("\n", " ")}`);
-  });
-  test("a stopped run is interrupted on the service before it is resumed", async () => {
-    await run("recover");
-    const [first, interrupt, second] = lines();
-    expect(first).not.toContain("--session");
-    expect(interrupt).toBe("ARGS api session.interrupt --param sessionID=ses_fake");
-    expect(second).toContain("--session ses_fake");
   });
   test("gives up after maxNudges, keeping the session", async () => {
     const r = await run("loop", 2, 2);

@@ -108,10 +108,10 @@ describe("buildArgs", () => {
   test("full options", () => {
     expect(
       buildArgs({ prompt: "-do it", model: "a/b#high", agent: "build", sessionId: "ses_1", fork: true, auto: true, title: "t", files: ["/x"] }),
-    ).toEqual(["run", "--format", "json", "--model", "a/b#high", "--agent", "build", "--session", "ses_1", "--fork", "--auto", "--title", "t", "--file", "/x", "--", "-do it"]);
+    ).toEqual(["run", "--standalone", "--format", "json", "--model", "a/b#high", "--agent", "build", "--session", "ses_1", "--fork", "--auto", "--title", "t", "--file", "/x", "--", "-do it"]);
   });
   test("minimal", () => {
-    expect(buildArgs({ prompt: "hi" })).toEqual(["run", "--format", "json", "--", "hi"]);
+    expect(buildArgs({ prompt: "hi" })).toEqual(["run", "--standalone", "--format", "json", "--", "hi"]);
   });
   test("fork without a session is dropped", () => {
     expect(buildArgs({ prompt: "hi", fork: true })).not.toContain("--fork");

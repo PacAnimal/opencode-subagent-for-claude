@@ -55,7 +55,11 @@ opencode compacts a session when its context fills. A grunt that keeps reading f
 - **Loop guard**: a compaction shows up as the context size collapsing between steps. Once a run compacts `OPENCODE_DELEGATE_LOOP_COMPACTIONS` times without an edit or any change in `git status`, it's stopped and the same session is resumed with a nudge to make the next change now. After `OPENCODE_DELEGATE_MAX_NUDGES` nudges it gives up with `looping: …`, keeping the session_id so Claude can continue it. All runs add up to one result, which reports edits, compactions and nudges.
 - **Stall guard**: with a large context a run can read and think for dozens of steps without ever compacting or editing. Once an auto run goes `OPENCODE_DELEGATE_STALL_STEPS` steps without an edit or any change in `git status` (checked every few steps), it's stopped and the same session is resumed with a nudge to write the first file now and continue file by file. The count restarts after each nudge. Stall and loop nudges share the `OPENCODE_DELEGATE_MAX_NUDGES` budget; when it runs out the run gives up with `stalled: …`. Read-only runs (`auto: false`) are never stall-nudged; they have a read budget instead.
 - **Read budget**: read-only runs get reader rules instead of the grunt rules: change nothing, read whole files once, put independent reads in parallel, answer as soon as possible. Once one takes `OPENCODE_DELEGATE_READ_STEPS` steps it's stopped and resumed with a nudge to write its answer now from what it has. It shares the `OPENCODE_DELEGATE_MAX_NUDGES` budget and gives up with `over budget: …`.
-- **Stopping for real**: opencode v2 runs sessions on its background service, which keeps going after the `opencode run` client is killed. Whenever a run is stopped (cancelled, idle, timed out or stopped by a guard), its session is interrupted on the service too, before any nudge resumes it.
+- **Stopping for real**: each run uses `opencode run --standalone`, so its server lives in the process the plugin starts rather than on opencode's shared background service, and leads its own process group. Whenever a run is stopped (cancelled, idle, timed out or stopped by a guard), the whole group goes with it: server, shells, builds.
+
+## Priority
+
+Runs start at the lowest CPU and I/O priority, so a pile of grunts never lags the machine you're working on: `taskpolicy -b` plus `nice 20` on macOS (efficiency cores, throttled disk and network), `nice 19` on Linux, the idle priority class on Windows. Everything a run starts inherits it. Because runs are standalone, opencode sessions you drive yourself on the shared service keep normal priority. Set `OPENCODE_DELEGATE_LOW_PRIORITY=false` to turn it off.
 
 ## Model names
 
@@ -72,6 +76,7 @@ Set these in the environment Claude Code runs in, e.g. the `env` block of `~/.cl
 | Variable | Default | |
 |---|---|---|
 | `OPENCODE_BIN` | auto-detected | Path to `opencode`. |
+| `OPENCODE_DELEGATE_LOW_PRIORITY` | `true` | Run grunts at the lowest CPU and I/O priority. |
 | `OPENCODE_DELEGATE_DEFAULT_MODEL` | opencode's default | Model used when none is given. |
 | `OPENCODE_DELEGATE_READ_MODEL` | the default model | Model for read-only runs (`auto: false`) when none is given. |
 | `OPENCODE_DELEGATE_AUTO` | `true` | Default for `auto`. |
