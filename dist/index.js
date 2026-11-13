@@ -22470,7 +22470,7 @@ var package_default = {
 
 // src/index.ts
 var INSTRUCTIONS = `Opt-in only. Never use these tools unless the user has asked you to use opencode.
-Once they have, it is mandatory: opencode is your team of junior devs for implementation grunt work. Split the work into scoped tasks and launch many in parallel with delegate_async (separate worktrees or non-overlapping files).
+Once they have, it is mandatory: opencode is your team of grunts for implementation work. Split the work into scoped tasks and launch many in parallel with delegate_async (separate worktrees or non-overlapping files).
 Grunts do grunt work, nothing more. Rules appended to every brief let them run lint, format, type-check and build and fix what those report, but stop them from running tests, committing, installing anything, or touching config, git or the environment. You run the tests yourself and review the diff (re-run lint as a final gate if you like), then send every failure or review finding back as a new implementation task (same session_id). Repeat until your verification passes.
 When a result has a NEEDS block (a tool, dependency, config change, access or decision), handle it yourself if it's clearly in scope and safe, otherwise ask the user. Never tell the grunt to do it. Then continue its session. RULE BROKEN means it committed anyway: undo the commit or keep it deliberately.
 Write a self-contained brief for each task (it can't see this conversation).`;

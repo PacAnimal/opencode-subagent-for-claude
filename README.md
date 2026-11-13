@@ -2,7 +2,7 @@
 
 A Claude Code plugin that lets Claude hand work to any model in your [opencode](https://opencode.ai) install.
 
-It's opt-in. Claude leaves opencode alone until you ask for it ("use opencode for this"). From then on, opencode is Claude's team of junior devs. Claude splits the work into scoped implementation tasks and runs many of them in parallel. opencode implements and may run linters, formatters, type checks and builds and fix what they report; it never runs tests. Claude runs the tests and reviews the diff itself, and sends every failure back as more implementation work, until the checks pass.
+It's opt-in. Claude leaves opencode alone until you ask for it ("use opencode for this"). From then on, opencode is Claude's team of grunts. Claude splits the work into scoped implementation tasks and runs many of them in parallel. opencode implements and may run linters, formatters, type checks and builds and fix what they report; it never runs tests. Claude runs the tests and reviews the diff itself, and sends every failure back as more implementation work, until the checks pass.
 
 Every brief gets a fixed rules block appended by the server:
 - implement only, in scope

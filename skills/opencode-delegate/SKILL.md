@@ -1,11 +1,11 @@
 ---
 name: opencode-delegate
-description: Delegate implementation grunt work to opencode models (a team of junior devs you can run in parallel) while Claude orchestrates, runs the tests and reviews the diff. Use ONLY when the user explicitly asks for opencode ("use opencode", "have opencode do it", "delegate this to opencode", "ask <model> via opencode"). Never on your own initiative. Once asked, it is mandatory for all implementation work that can be delegated.
+description: Delegate implementation grunt work to opencode models (a team of grunts you can run in parallel) while Claude orchestrates, runs the tests and reviews the diff. Use ONLY when the user explicitly asks for opencode ("use opencode", "have opencode do it", "delegate this to opencode", "ask <model> via opencode"). Never on your own initiative. Once asked, it is mandatory for all implementation work that can be delegated.
 ---
 
 # Delegating to opencode
 
-The `opencode` MCP server runs tasks with `opencode run` in the project. Each run is a junior dev with its own read/edit/shell tools. You can launch many of them at once. **You are the lead**: you split the work, brief, verify and send fixes back.
+The `opencode` MCP server runs tasks with `opencode run` in the project. Each run is a grunt with its own read/edit/shell tools. You can launch many of them at once. **You are the lead**: you split the work, brief, verify and send fixes back.
 
 ## When to use it
 
@@ -14,7 +14,7 @@ The `opencode` MCP server runs tasks with `opencode run` in the project. Each ru
 
 ## Who does what
 
-| opencode (juniors) | You (lead) |
+| opencode (grunts) | You (lead) |
 |---|---|
 | Implementation: new code, changes, refactors, renames, boilerplate, test code, docs | Splitting the work and writing briefs |
 | Running lint, format, type-check and build, and fixing what they report | Running tests (and lint again as a final gate, if you like) |
@@ -66,11 +66,11 @@ In a plugin install the tools are named like `mcp__plugin_opencode-subagent_open
 
 ## Writing the brief (`prompt`)
 
-The junior **cannot see this conversation**. Brief it like a new hire:
+The grunt **cannot see this conversation**. Brief it like a new hire:
 
 1. **Goal**: what to build or change, and why.
 2. **Context**: relevant paths, and patterns to follow. If you know the fix, say what to change and where.
-3. **Scope**: the files it owns, and what not to touch. Keep to it, since other juniors work in parallel.
+3. **Scope**: the files it owns, and what not to touch. Keep to it, since other grunts work in parallel.
 4. **Constraints**: the style to match. If the task really does need a config or manifest file edited, assign that file explicitly. Otherwise grunts leave config alone.
 
 The rules block (no tests, lint and build allowed, no commits, no installs, no config, Needs and Result sections) is appended for you.
