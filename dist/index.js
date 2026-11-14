@@ -21966,9 +21966,10 @@ function runOpencode(o) {
     child.on("close", (code) => finish(code));
   });
 }
+var textArgs = (args) => [...args, "--standalone"];
 function execText(args, cwd) {
   return new Promise((resolve) => {
-    const child = spawn(config2.bin, args, { cwd, env: runEnv(cwd), stdio: ["ignore", "pipe", "pipe"] });
+    const child = spawn(config2.bin, textArgs(args), { cwd, env: runEnv(cwd), stdio: ["ignore", "pipe", "pipe"] });
     let stdout = "";
     let stderr = "";
     child.stdout.setEncoding("utf8").on("data", (c) => stdout += c);
@@ -22442,7 +22443,7 @@ async function waitTask(task, waitSec) {
 // package.json
 var package_default = {
   name: "opencode-subagent-for-claude",
-  version: "0.9.0",
+  version: "0.9.2",
   description: "Claude Code plugin + MCP server that lets Claude hand work to opencode models and stay the orchestrator.",
   type: "module",
   license: "MIT",

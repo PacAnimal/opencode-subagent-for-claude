@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
-import { buildArgs, COMPACTION_MIN_CONTEXT, EventCollector, formatProgress, runEnv } from "../src/opencode.ts";
+import { buildArgs, COMPACTION_MIN_CONTEXT, EventCollector, formatProgress, runEnv, textArgs } from "../src/opencode.ts";
 
 const collect = (fixture: string) => {
   const c = new EventCollector();
@@ -130,5 +130,12 @@ describe("runEnv", () => {
   test("env untouched without cwd", () => {
     const env = { PWD: "/server/a" };
     expect(runEnv(undefined, env)).toBe(env);
+  });
+});
+
+describe("textArgs", () => {
+  test("listings never use the shared service", () => {
+    expect(textArgs(["models"])).toEqual(["models", "--standalone"]);
+    expect(textArgs(["session", "list", "-n", "20"])).toEqual(["session", "list", "-n", "20", "--standalone"]);
   });
 });

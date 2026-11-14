@@ -335,9 +335,12 @@ export function runOpencode(o: RunOptions): Promise<RunResult> {
   });
 }
 
+// listings run standalone too, so the plugin never starts or keeps opencode's shared background service
+export const textArgs = (args: string[]): string[] => [...args, "--standalone"];
+
 export function execText(args: string[], cwd?: string): Promise<{ code: number | null; stdout: string; stderr: string }> {
   return new Promise((resolve) => {
-    const child = spawn(config.bin, args, { cwd, env: runEnv(cwd), stdio: ["ignore", "pipe", "pipe"] });
+    const child = spawn(config.bin, textArgs(args), { cwd, env: runEnv(cwd), stdio: ["ignore", "pipe", "pipe"] });
     let stdout = "";
     let stderr = "";
     child.stdout.setEncoding("utf8").on("data", (c: string) => (stdout += c));
