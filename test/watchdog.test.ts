@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, describe, expect, jest, test } from "bun:test";
+import { spawnSync } from "node:child_process";
 import { mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { getPriority, tmpdir } from "node:os";
 import { join } from "node:path";
@@ -57,13 +58,20 @@ describe("runOpencode with a fake binary", () => {
     delete process.env.FAKE_LOG;
     rmSync(dir, { recursive: true, force: true });
   });
+  // a killed process stays a zombie until its new parent reaps it, and signal 0 still reaches a zombie
   const alive = (pid: number) => {
     try {
       process.kill(pid, 0);
-      return true;
     } catch {
       return false;
     }
+    const r = spawnSync("ps", ["-o", "stat=", "-p", String(pid)], { encoding: "utf8" });
+    return !r.stdout.trim().startsWith("Z");
+  };
+  // the group is signalled when the run is cancelled, so give its members a moment to exit
+  const gone = async (pid: number, ms = 2000) => {
+    for (const end = Date.now() + ms; alive(pid) && Date.now() < end; ) await Bun.sleep(20);
+    return !alive(pid);
   };
   const niceness = () => Number(readFileSync(`${log}.nice`, "utf8"));
 
@@ -80,7 +88,7 @@ describe("runOpencode with a fake binary", () => {
     // the first event comes after the child has started
     const r = await runOpencode({ prompt: "p", bin, idleMs: 60_000, signal: controller.signal, onProgress: () => controller.abort() });
     expect(r.error).toBe("cancelled");
-    expect(alive(Number(readFileSync(`${log}.child`, "utf8")))).toBe(false);
+    expect(await gone(Number(readFileSync(`${log}.child`, "utf8")))).toBe(true);
   });
   test("runs at the lowest priority", async () => {
     await runOpencode({ prompt: "p", bin, idleMs: 60_000 });
